@@ -173,7 +173,7 @@ const points = computed(() => {
       color:      meta.color,
       label:      meta.label,
       intensity:  e.intensity,
-      timeLabel:  timeLabel(e.timestamp),
+      timeLabel:  timeLabel(e.setAt),
     }
   })
 })

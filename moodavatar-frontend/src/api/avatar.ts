@@ -79,7 +79,7 @@ export interface MoodEntry {
   emotion:   Emotion
   intensity: number
   note:      string | null
-  timestamp: string
+  setAt:     string
   config:    AvatarConfig
 }
 

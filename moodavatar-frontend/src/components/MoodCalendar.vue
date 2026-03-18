@@ -1,10 +1,9 @@
 <template>
-  <div class="relative overflow-x-auto">
+  <div class="relative overflow-x-auto" @mouseleave="tooltip = null">
     <svg
       :width="svgWidth"
       :height="svgHeight"
       class="block"
-      @mouseleave="tooltip = null"
     >
       <!-- Month labels -->
       <text
@@ -44,27 +43,8 @@
       />
     </svg>
 
-    <!-- Tooltip -->
-    <div
-      v-if="tooltip"
-      class="absolute z-20 pointer-events-none px-2 py-1 rounded text-xs bg-slate-900 border border-slate-700 text-slate-200 whitespace-nowrap"
-      :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
-    >
-      <span class="font-semibold">{{ tooltip.date }}</span>
-      <template v-if="tooltip.count > 0">
-        &nbsp;·&nbsp;{{ tooltip.count }} {{ tooltip.count === 1 ? 'Eintrag' : 'Einträge' }}
-        <span v-if="tooltip.emotion" class="ml-1" :style="{ color: emotionColor(tooltip.emotion) }">
-          {{ EMOTION_LABELS[tooltip.emotion] ?? tooltip.emotion }}
-        </span>
-        &nbsp;·&nbsp;Ø {{ tooltip.avgIntensity.toFixed(1) }}
-      </template>
-      <template v-else>
-        &nbsp;·&nbsp;kein Eintrag
-      </template>
-    </div>
-
     <!-- Legend -->
-    <div class="flex items-center gap-2 mt-2 text-xs text-slate-500">
+    <div class="flex items-center gap-2 mt-3 text-xs text-slate-500">
       <span>weniger</span>
       <div
         v-for="n in [0, 1, 2, 3]"
@@ -75,6 +55,38 @@
       <span>mehr</span>
     </div>
   </div>
+
+  <!-- Tooltip — fixed so it's never clipped by overflow -->
+  <Teleport to="body">
+    <div
+      v-if="tooltip"
+      class="fixed z-50 pointer-events-none"
+      :style="{ left: tooltip.x + 14 + 'px', top: tooltip.y - 48 + 'px' }"
+    >
+      <div class="px-3 py-2 rounded-xl text-xs bg-slate-900/95 border border-slate-600 text-slate-200 whitespace-nowrap shadow-2xl backdrop-blur-sm">
+        <div class="font-semibold text-slate-100 mb-0.5">{{ formatTooltipDate(tooltip.date) }}</div>
+        <template v-if="tooltip.count > 0">
+          <div class="flex items-center gap-1.5 mt-1">
+            <div
+              v-if="tooltip.emotion"
+              class="w-2 h-2 rounded-full"
+              :style="{ background: emotionColor(tooltip.emotion) }"
+            />
+            <span v-if="tooltip.emotion" :style="{ color: emotionColor(tooltip.emotion) }">
+              {{ EMOTION_LABELS[tooltip.emotion] ?? tooltip.emotion }}
+            </span>
+          </div>
+          <div class="text-slate-400 mt-0.5">
+            {{ tooltip.count }} {{ tooltip.count === 1 ? 'Eintrag' : 'Einträge' }}
+            · Ø {{ tooltip.avgIntensity.toFixed(1) }}
+          </div>
+        </template>
+        <template v-else>
+          <div class="text-slate-500 mt-0.5">Kein Eintrag</div>
+        </template>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -118,6 +130,11 @@ const EMOTION_LABELS: Record<string, string> = {
 
 function emotionColor(e: string) { return EMOTION_COLORS[e] ?? '#6b7280' }
 
+function formatTooltipDate(dateStr: string) {
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 // Build a lookup: date string → CalendarDay
 const dayMap = computed(() => {
   const m: Record<string, CalendarDay> = {}
@@ -130,13 +147,12 @@ const cells = computed(() => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Find last Monday (or today if Monday) as the end-of-grid anchor
   const dayOfWeek = (today.getDay() + 6) % 7  // Mon=0 .. Sun=6
   const gridEnd = new Date(today)
-  gridEnd.setDate(today.getDate() - dayOfWeek + 6)  // end of current week (Sunday)
+  gridEnd.setDate(today.getDate() - dayOfWeek + 6)
 
   const gridStart = new Date(gridEnd)
-  gridStart.setDate(gridEnd.getDate() - WEEKS * 7 + 1)  // 52 weeks back (Monday)
+  gridStart.setDate(gridEnd.getDate() - WEEKS * 7 + 1)
 
   const result = []
   const cur = new Date(gridStart)
@@ -167,7 +183,7 @@ const cells = computed(() => {
   return result
 })
 
-// Month label positions: show label at first week of each month
+// Month label positions
 const monthLabels = computed(() => {
   const MONTH_NAMES = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
   const seen = new Set<number>()
@@ -183,7 +199,7 @@ const monthLabels = computed(() => {
   return labels
 })
 
-// Tooltip
+// Tooltip — fixed position via clientX/Y
 interface TooltipData {
   date: string; count: number; emotion: string | null
   avgIntensity: number; x: number; y: number
@@ -191,15 +207,13 @@ interface TooltipData {
 const tooltip = ref<TooltipData | null>(null)
 
 function showTooltip(cell: typeof cells.value[0], e: MouseEvent) {
-  const rect = (e.currentTarget as SVGRectElement).getBoundingClientRect()
-  const svgRect = (e.currentTarget as SVGRectElement).closest('svg')!.getBoundingClientRect()
   tooltip.value = {
     date: cell.date,
     count: cell.count,
     emotion: cell.emotion,
     avgIntensity: cell.avgIntensity,
-    x: rect.left - svgRect.left + CELL_SIZE / 2,
-    y: rect.top  - svgRect.top  - 32,
+    x: e.clientX,
+    y: e.clientY,
   }
 }
 </script>

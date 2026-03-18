@@ -302,7 +302,7 @@ function needColor(v: number): string {
 function onAvatarUpdated(updated: Avatar) {
   avatar.value = updated
   history.value = [
-    { emotion: updated.emotion, intensity: updated.intensity, note: updated.note, timestamp: updated.updatedAt, config: updated.config },
+    { emotion: updated.emotion, intensity: updated.intensity, note: updated.note, setAt: updated.updatedAt, config: updated.config },
     ...history.value,
   ].slice(0, 50)
   avatarApi.getNeeds(auth.accessToken).then(r => { needs.value = r.data }).catch(() => {})
