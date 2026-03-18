@@ -12,13 +12,20 @@ import io.ktor.server.routing.*
 fun Route.adminRoutes(adminService: AdminService) {
     route("/users/admin") {
         authenticate("auth-jwt") {
-
             // GET /users/admin/stats
             get("/stats") {
-                val role = call.principal<JWTPrincipal>()?.payload?.getClaim("role")?.asString()
-                if (role != "ADMIN") return@get call.respond(
-                    HttpStatusCode.Forbidden, ErrorResponse("FORBIDDEN", "Admin access required")
-                )
+                val role =
+                    call
+                        .principal<JWTPrincipal>()
+                        ?.payload
+                        ?.getClaim("role")
+                        ?.asString()
+                if (role != "ADMIN") {
+                    return@get call.respond(
+                        HttpStatusCode.Forbidden,
+                        ErrorResponse("FORBIDDEN", "Admin access required"),
+                    )
+                }
                 call.respond(HttpStatusCode.OK, adminService.getStats())
             }
         }

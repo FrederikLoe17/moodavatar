@@ -13,31 +13,38 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.UUID
 
-fun Route.authRoutes(authService: AuthService, emailService: EmailService, userServiceClient: UserServiceClient) {
+fun Route.authRoutes(
+    authService: AuthService,
+    emailService: EmailService,
+    userServiceClient: UserServiceClient,
+) {
     route("/auth") {
-
         // GET /auth/health
         get("/health") {
             call.respond(HttpStatusCode.OK, MessageResponse("ok"))
         }
 
-
         // POST /auth/register
         post("/register") {
             val req = call.receive<RegisterRequest>()
-            val user = try {
-                authService.register(req)
-            } catch (e: Exception) {
-                val msg = e.message ?: "UNKNOWN"
-                val status = if (msg.contains("TAKEN")) HttpStatusCode.Conflict else HttpStatusCode.BadRequest
-                call.respond(status, ErrorResponse(msg, "Registration failed"))
-                return@post
+            val user =
+                try {
+                    authService.register(req)
+                } catch (e: Exception) {
+                    val msg = e.message ?: "UNKNOWN"
+                    val status = if (msg.contains("TAKEN")) HttpStatusCode.Conflict else HttpStatusCode.BadRequest
+                    call.respond(status, ErrorResponse(msg, "Registration failed"))
+                    return@post
+                }
+            try {
+                userServiceClient.createProfile(user.id, user.username)
+            } catch (_: Exception) {
             }
-            try { userServiceClient.createProfile(user.id, user.username) } catch (_: Exception) {}
             try {
                 val verificationToken = authService.createVerificationToken(UUID.fromString(user.id))
                 emailService.sendEmailVerification(user.email, verificationToken)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             call.respond(HttpStatusCode.Created, user)
         }
 
@@ -113,11 +120,13 @@ fun Route.authRoutes(authService: AuthService, emailService: EmailService, userS
         authenticate("auth-jwt") {
             get("/me") {
                 val principal = call.principal<JWTPrincipal>()
-                val userId    = principal?.payload?.getClaim("userId")?.asString()
-                    ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                val userId =
+                    principal?.payload?.getClaim("userId")?.asString()
+                        ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
-                val user = authService.getUserById(UUID.fromString(userId))
-                    ?: return@get call.respond(HttpStatusCode.NotFound)
+                val user =
+                    authService.getUserById(UUID.fromString(userId))
+                        ?: return@get call.respond(HttpStatusCode.NotFound)
 
                 call.respond(HttpStatusCode.OK, user)
             }

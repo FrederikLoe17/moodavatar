@@ -15,6 +15,7 @@ ktlint {
     outputToConsole.set(true)
     filter {
         exclude("**/generated/**")
+        exclude("**/*.kts")
     }
 }
 
@@ -51,4 +52,8 @@ dependencies {
     implementation("com.rabbitmq:amqp-client:5.20.0")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
+    testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.23")
+    testImplementation("com.h2database:h2:2.2.224")
 }

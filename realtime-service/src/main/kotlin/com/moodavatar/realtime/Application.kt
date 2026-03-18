@@ -20,34 +20,39 @@ import java.time.Duration
 fun main(args: Array<String>): Unit = EngineMain.main(args)
 
 fun Application.module() {
-    val jwtSecret              = environment.config.property("jwt.secret").getString()
-    val userServiceUrl         = environment.config.property("services.userService").getString()
+    val jwtSecret = environment.config.property("jwt.secret").getString()
+    val userServiceUrl = environment.config.property("services.userService").getString()
     val notificationServiceUrl = environment.config.property("services.notificationService").getString()
-    val avatarServiceUrl       = environment.config.property("services.avatarService").getString()
-    val redisHost              = environment.config.property("redis.host").getString()
-    val redisPort              = environment.config.property("redis.port").getString().toInt()
+    val avatarServiceUrl = environment.config.property("services.avatarService").getString()
+    val redisHost = environment.config.property("redis.host").getString()
+    val redisPort =
+        environment.config
+            .property("redis.port")
+            .getString()
+            .toInt()
 
     // HTTP client for outbound calls (to user-service)
-    val httpClient = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
+    val httpClient =
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
         }
-    }
 
     // WebSocket support
     install(WebSockets) {
-        pingPeriod     = Duration.ofSeconds(30)
-        timeout        = Duration.ofSeconds(60)
-        maxFrameSize   = Long.MAX_VALUE
-        masking        = false
+        pingPeriod = Duration.ofSeconds(30)
+        timeout = Duration.ofSeconds(60)
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
     }
 
     install(CallLogging) { level = Level.INFO }
 
-    val presenceService      = PresenceService(redisHost, redisPort)
-    val friendService        = FriendService(httpClient, userServiceUrl)
-    val notificationClient   = NotificationClient(httpClient, notificationServiceUrl)
-    val avatarClient         = AvatarClient(httpClient, avatarServiceUrl)
+    val presenceService = PresenceService(redisHost, redisPort)
+    val friendService = FriendService(httpClient, userServiceUrl)
+    val notificationClient = NotificationClient(httpClient, notificationServiceUrl)
+    val avatarClient = AvatarClient(httpClient, avatarServiceUrl)
 
     environment.monitor.subscribe(ApplicationStopped) {
         presenceService.close()

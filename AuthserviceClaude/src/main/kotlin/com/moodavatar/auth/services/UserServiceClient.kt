@@ -12,7 +12,10 @@ class UserServiceClient(
 ) {
     private val log = LoggerFactory.getLogger(UserServiceClient::class.java)
 
-    suspend fun createProfile(userId: String, username: String) {
+    suspend fun createProfile(
+        userId: String,
+        username: String,
+    ) {
         try {
             val body = """{"id":"$userId","username":"$username","displayName":"$username"}"""
             http.post("$baseUrl/users/internal/profile") {

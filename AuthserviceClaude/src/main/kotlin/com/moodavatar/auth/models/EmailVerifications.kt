@@ -4,11 +4,11 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.datetime
 
 object EmailVerifications : Table("email_verifications") {
-    val id        = uuid("id").autoGenerate()
-    val userId    = uuid("user_id").references(Users.id)
-    val token     = varchar("token", 512).uniqueIndex()
+    val id = uuid("id").autoGenerate()
+    val userId = uuid("user_id").references(Users.id)
+    val token = varchar("token", 512).uniqueIndex()
     val expiresAt = datetime("expires_at")
-    val used      = bool("used").default(false)
+    val used = bool("used").default(false)
 
     override val primaryKey = PrimaryKey(id)
 }
