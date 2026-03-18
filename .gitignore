@@ -37,3 +37,4 @@ logs/
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 !**/gradle/wrapper/gradle-wrapper.jar
+moodavatar-frontend/package-lock.json
