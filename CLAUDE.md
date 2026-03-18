@@ -79,7 +79,8 @@ fix/*     ← Bug-Fixes      (z.B. fix/avatar-flicker)
 1. Neuen Branch von `develop` erstellen: `git checkout -b feature/<name>`
 2. Änderungen umsetzen + ktlint-clean halten
 3. Commit(s) mit aussagekräftigen Messages
-4. PR gegen `develop` mit `gh pr create` — du reviewst, mergst, done
+4. **Vor dem PR**: `./gradlew ktlintCheck` in jedem geänderten Service ausführen — kein PR ohne grünen ktlint
+5. PR gegen `develop` mit `gh pr create` — du reviewst, mergst, done
 
 ### Commits
 - Format: `<type>(<scope>): <kurze Beschreibung>` (Conventional Commits)
