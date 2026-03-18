@@ -1,0 +1,17 @@
+{$DOMAIN} {
+    # WebSocket — realtime service (must be before /api catch-all)
+    handle /ws* {
+        reverse_proxy realtime-service:8084
+    }
+
+    # REST API — strip /api prefix before forwarding to gateway
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy api-gateway:8080
+    }
+
+    # Frontend SPA
+    handle {
+        reverse_proxy frontend:80
+    }
+}
