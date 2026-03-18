@@ -181,7 +181,7 @@ const points = computed(() => {
 const segments = computed(() =>
   points.value.slice(0, -1).map((p, i) => ({
     x1: p.x, y1: p.y,
-    x2: points.value[i + 1].x, y2: points.value[i + 1].y,
+    x2: points.value[i + 1]!.x, y2: points.value[i + 1]!.y,
     color: p.color,
   }))
 )
@@ -191,7 +191,7 @@ const fillPath = computed(() => {
   const first = points.value[0]
   const last  = points.value[points.value.length - 1]
   const lineD = points.value.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  return `${lineD} L${last.x},${H - PAD_B} L${first.x},${H - PAD_B} Z`
+  return `${lineD} L${last!.x},${H - PAD_B} L${first!.x},${H - PAD_B} Z`
 })
 
 const activEmotions = computed(() => {

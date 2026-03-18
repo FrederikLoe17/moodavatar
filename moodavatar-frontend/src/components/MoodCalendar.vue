@@ -193,7 +193,7 @@ const monthLabels = computed(() => {
     const month = new Date(cell.date).getMonth()
     if (!seen.has(month)) {
       seen.add(month)
-      labels.push({ label: MONTH_NAMES[month], x: cell.col * CELL_STEP })
+      labels.push({ label: MONTH_NAMES[month]!, x: cell.col * CELL_STEP })
     }
   }
   return labels
