@@ -174,7 +174,7 @@ function formatDate(iso: string) {
 }
 
 onMounted(async () => {
-  const token = auth.token
+  const token = auth.accessToken
   if (!token) return
 
   try {
