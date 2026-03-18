@@ -1,13 +1,13 @@
 {$DOMAIN} {
-    # WebSocket — realtime service (must be before /api catch-all)
+    # WebSocket — now served by monolith on port 8080
     handle /ws* {
-        reverse_proxy realtime-service:8084
+        reverse_proxy backend:8080
     }
 
-    # REST API — strip /api prefix before forwarding to gateway
+    # REST API — strip /api prefix before forwarding to monolith
     handle /api/* {
         uri strip_prefix /api
-        reverse_proxy api-gateway:8080
+        reverse_proxy backend:8080
     }
 
     # Frontend SPA

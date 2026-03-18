@@ -40,9 +40,6 @@ JWT_AUDIENCE=moodavatar-users
 JWT_ACCESS_EXPIRY_MS=900000
 JWT_REFRESH_EXPIRY_MS=2592000000
 
-RABBITMQ_USER=moodavatar
-RABBITMQ_PASS=<sicheres-passwort>
-
 # SMTP für E-Mails (z.B. Brevo kostenlos: 300 E-Mails/Tag)
 SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
@@ -82,7 +79,7 @@ Für echte E-Mails (Registrierung, Passwort-Reset) empfehle ich **Brevo** (koste
 3. In `.env` auf dem Server eintragen und Services neu starten:
    ```bash
    cd /opt/moodavatar
-   docker compose -f docker-compose.prod.yml up -d auth-service
+   docker compose -f docker-compose.prod.yml up -d backend
    ```
 
 ---
@@ -90,8 +87,8 @@ Für echte E-Mails (Registrierung, Passwort-Reset) empfehle ich **Brevo** (koste
 ## 4. Nützliche Befehle auf dem Server
 
 ```bash
-# Logs eines Services anzeigen
-docker compose -f docker-compose.prod.yml logs -f auth-service
+# Logs des Backends anzeigen
+docker compose -f docker-compose.prod.yml logs -f backend
 
 # Alle Services neu starten
 docker compose -f docker-compose.prod.yml restart

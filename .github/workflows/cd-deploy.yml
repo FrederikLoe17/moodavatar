@@ -22,24 +22,9 @@ jobs:
           - name: frontend
             context: moodavatar-frontend
             image: moodavatar-frontend
-          - name: auth
-            context: AuthserviceClaude
-            image: moodavatar-auth
-          - name: user
-            context: user-service
-            image: moodavatar-user
-          - name: avatar
-            context: avatar-service
-            image: moodavatar-avatar
-          - name: gateway
-            context: api-gateway
-            image: moodavatar-gateway
-          - name: realtime
-            context: realtime-service
-            image: moodavatar-realtime
-          - name: notification
-            context: notification-service
-            image: moodavatar-notification
+          - name: backend
+            context: moodavatar-backend
+            image: moodavatar-backend
 
     steps:
       - uses: actions/checkout@v4

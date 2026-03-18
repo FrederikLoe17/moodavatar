@@ -17,8 +17,7 @@ services:
       DOMAIN: ${DOMAIN}
     depends_on:
       - frontend
-      - api-gateway
-      - realtime-service
+      - backend
 
   # ── Frontend ─────────────────────────────────────────────────────────────
 
@@ -26,51 +25,19 @@ services:
     image: ghcr.io/frederikloe17/moodavatar-frontend:latest
     restart: unless-stopped
 
-  # ── Databases ─────────────────────────────────────────────────────────────
+  # ── Databases ────────────────────────────────────────────────────────────
 
-  postgres-auth:
+  postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: moodavatar_auth
+      POSTGRES_DB: moodavatar
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - postgres_auth_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar_auth"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-  postgres-user:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: moodavatar_user
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_user_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar_user"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-
-  postgres-notification:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: moodavatar_notification
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_notification_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar_notification"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -80,7 +47,7 @@ services:
     image: mongo:7
     restart: unless-stopped
     environment:
-      MONGO_INITDB_DATABASE: moodavatar_avatar
+      MONGO_INITDB_DATABASE: moodavatar
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -90,39 +57,19 @@ services:
       retries: 10
       start_period: 10s
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+  # ── Monolith Backend ─────────────────────────────────────────────────────
 
-  rabbitmq:
-    image: rabbitmq:3-alpine
+  backend:
+    image: ghcr.io/frederikloe17/moodavatar-backend:latest
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
-      start_period: 20s
-
-  # ── Services ──────────────────────────────────────────────────────────────
-
-  auth-service:
-    image: ghcr.io/frederikloe17/moodavatar-auth:latest
-    restart: unless-stopped
-    environment:
-      DB_HOST: postgres-auth
+      DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: moodavatar_auth
+      DB_NAME: moodavatar
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DB: moodavatar
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER}
       JWT_AUDIENCE: ${JWT_AUDIENCE}
@@ -133,104 +80,15 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       APP_BASE_URL: https://${DOMAIN}
-      USER_SERVICE_URL: http://user-service:8082
-    depends_on:
-      postgres-auth:
-        condition: service_healthy
-
-  user-service:
-    image: ghcr.io/frederikloe17/moodavatar-user:latest
-    restart: unless-stopped
-    environment:
-      DB_HOST: postgres-user
-      DB_PORT: 5432
-      DB_NAME: moodavatar_user
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-      AUTH_SERVICE_URL: http://auth-service:8081
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASS}
-    depends_on:
-      postgres-user:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-
-  avatar-service:
-    image: ghcr.io/frederikloe17/moodavatar-avatar:latest
-    restart: unless-stopped
-    environment:
-      MONGO_URI: mongodb://mongodb:27017
-      MONGO_DB: moodavatar_avatar
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-    depends_on:
-      mongodb:
-        condition: service_healthy
-
-  api-gateway:
-    image: ghcr.io/frederikloe17/moodavatar-gateway:latest
-    restart: unless-stopped
-    environment:
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ISSUER: ${JWT_ISSUER}
-      JWT_AUDIENCE: ${JWT_AUDIENCE}
-      AUTH_SERVICE_URL: http://auth-service:8081
-      USER_SERVICE_URL: http://user-service:8082
-      AVATAR_SERVICE_URL: http://avatar-service:8083
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085
       ALLOWED_ORIGIN: https://${DOMAIN}
     depends_on:
-      - auth-service
-      - user-service
-      - avatar-service
-
-  realtime-service:
-    image: ghcr.io/frederikloe17/moodavatar-realtime:latest
-    restart: unless-stopped
-    environment:
-      JWT_SECRET: ${JWT_SECRET}
-      USER_SERVICE_URL: http://user-service:8082
-      NOTIFICATION_SERVICE_URL: http://notification-service:8085
-      AVATAR_SERVICE_URL: http://avatar-service:8083
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    depends_on:
-      redis:
+      postgres:
         condition: service_healthy
-      user-service:
-        condition: service_started
-
-  notification-service:
-    image: ghcr.io/frederikloe17/moodavatar-notification:latest
-    restart: unless-stopped
-    environment:
-      DB_HOST: postgres-notification
-      DB_PORT: 5432
-      DB_NAME: moodavatar_notification
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: ${RABBITMQ_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_PASS}
-    depends_on:
-      postgres-notification:
-        condition: service_healthy
-      rabbitmq:
+      mongodb:
         condition: service_healthy
 
 volumes:
   caddy_data:
   caddy_config:
-  postgres_auth_data:
-  postgres_user_data:
-  postgres_notification_data:
+  postgres_data:
   mongo_data:
