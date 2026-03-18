@@ -71,7 +71,7 @@ class AvatarService(
                         "\$push",
                         Document(
                             "history",
-                            Document("\$each", listOf(moodDoc)).append("\$slice", -50),
+                            Document("\$each", listOf(moodDoc)).append("\$slice", -365),
                         ),
                     )
 
@@ -141,6 +141,140 @@ class AvatarService(
             @Suppress("UNCHECKED_CAST")
             val history = doc["history"] as? List<Document> ?: emptyList()
             history.takeLast(limit).reversed().map { it.toMoodEntry() }
+        }
+
+    // ── Kalender-Daten ────────────────────────────────────────────────────────
+    suspend fun getCalendarData(
+        userId: String,
+        days: Int = 90,
+    ): List<CalendarDayResponse> =
+        withContext(Dispatchers.IO) {
+            val doc = col.find(Document("_id", userId)).firstOrNull() ?: return@withContext emptyList()
+
+            @Suppress("UNCHECKED_CAST")
+            val history = doc["history"] as? List<Document> ?: emptyList()
+            val cutoff = Instant.now().minusSeconds(days.toLong() * 86400)
+
+            history
+                .filter { entry ->
+                    val setAt = entry.getString("setAt") ?: return@filter false
+                    Instant.parse(setAt).isAfter(cutoff)
+                }.groupBy { entry ->
+                    entry.getString("setAt")?.substring(0, 10) ?: ""
+                }.filterKeys { it.isNotEmpty() }
+                .map { (date, entries) ->
+                    val dominant =
+                        entries
+                            .map { it.getString("emotion") ?: "NEUTRAL" }
+                            .groupingBy { it }
+                            .eachCount()
+                            .maxByOrNull { it.value }
+                            ?.key
+                    val avg = entries.map { it.getInteger("intensity", 5).toDouble() }.average()
+                    CalendarDayResponse(date = date, count = entries.size, avgIntensity = avg, dominantEmotion = dominant)
+                }.sortedBy { it.date }
+        }
+
+    // ── Insights ──────────────────────────────────────────────────────────────
+    suspend fun getInsights(userId: String): InsightsResponse =
+        withContext(Dispatchers.IO) {
+            val doc = col.find(Document("_id", userId)).firstOrNull()
+
+            @Suppress("UNCHECKED_CAST")
+            val history = doc?.get("history") as? List<Document> ?: emptyList()
+
+            val datesWithEntries =
+                history
+                    .mapNotNull { it.getString("setAt")?.substring(0, 10) }
+                    .toSortedSet()
+
+            // Current streak (days ending today or yesterday)
+            var currentStreak = 0
+            var checkDate = java.time.LocalDate.now()
+            while (datesWithEntries.contains(checkDate.toString())) {
+                currentStreak++
+                checkDate = checkDate.minusDays(1)
+            }
+            if (currentStreak == 0) {
+                checkDate =
+                    java.time.LocalDate
+                        .now()
+                        .minusDays(1)
+                while (datesWithEntries.contains(checkDate.toString())) {
+                    currentStreak++
+                    checkDate = checkDate.minusDays(1)
+                }
+            }
+
+            // Longest streak
+            var longestStreak = 0
+            var runningStreak = 0
+            var prevDate: java.time.LocalDate? = null
+            for (dateStr in datesWithEntries) {
+                val date = java.time.LocalDate.parse(dateStr)
+                runningStreak = if (prevDate != null && date == prevDate!!.plusDays(1)) runningStreak + 1 else 1
+                if (runningStreak > longestStreak) longestStreak = runningStreak
+                prevDate = date
+            }
+
+            // Emotion distribution
+            val emotionCounts =
+                history
+                    .groupBy { it.getString("emotion") ?: "NEUTRAL" }
+                    .map { (emotion, entries) -> emotion to entries.size }
+                    .sortedByDescending { it.second }
+            val totalEntries = emotionCounts.sumOf { it.second }
+            val emotionDistribution =
+                emotionCounts.map { (emotion, count) ->
+                    EmotionDistribution(
+                        emotion = emotion,
+                        count = count,
+                        percentage = if (totalEntries > 0) count.toDouble() / totalEntries * 100 else 0.0,
+                    )
+                }
+
+            // Average intensity
+            val avgIntensity =
+                if (history.isEmpty()) {
+                    0.0
+                } else {
+                    history.map { it.getInteger("intensity", 5).toDouble() }.average()
+                }
+
+            // Weekday pattern (Mon=0 .. Sun=6)
+            val dayNames = listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+            val byDayOfWeek =
+                history
+                    .groupBy { entry ->
+                        val setAt = entry.getString("setAt") ?: return@groupBy -1
+                        java.time.LocalDate
+                            .parse(setAt.substring(0, 10))
+                            .dayOfWeek.value - 1
+                    }.filterKeys { it >= 0 }
+            val weekdayPattern =
+                (0..6).map { dayIdx ->
+                    val entries = byDayOfWeek[dayIdx] ?: emptyList()
+                    WeekdayStats(
+                        day = dayNames[dayIdx],
+                        avgIntensity =
+                            if (entries.isEmpty()) {
+                                0.0
+                            } else {
+                                entries.map { it.getInteger("intensity", 5).toDouble() }.average()
+                            },
+                        count = entries.size,
+                    )
+                }
+
+            InsightsResponse(
+                totalEntries = totalEntries,
+                currentStreak = currentStreak,
+                longestStreak = longestStreak,
+                mostCommonEmotion = emotionDistribution.firstOrNull()?.emotion,
+                avgIntensity = avgIntensity,
+                emotionDistribution = emotionDistribution,
+                weekdayPattern = weekdayPattern,
+            )
         }
 
     // ── Admin: Stimmungsstatistiken ───────────────────────────────────────────

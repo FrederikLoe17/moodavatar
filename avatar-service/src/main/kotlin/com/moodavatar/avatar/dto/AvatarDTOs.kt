@@ -63,6 +63,41 @@ data class MessageResponse(
     val message: String,
 )
 
+// ── Insights / Journaling DTOs ────────────────────────────────────────────────
+
+@Serializable
+data class CalendarDayResponse(
+    val date: String, // YYYY-MM-DD
+    val count: Int,
+    val avgIntensity: Double,
+    val dominantEmotion: String?,
+)
+
+@Serializable
+data class WeekdayStats(
+    val day: String, // MON, TUE, WED, THU, FRI, SAT, SUN
+    val avgIntensity: Double,
+    val count: Int,
+)
+
+@Serializable
+data class EmotionDistribution(
+    val emotion: String,
+    val count: Int,
+    val percentage: Double,
+)
+
+@Serializable
+data class InsightsResponse(
+    val totalEntries: Int,
+    val currentStreak: Int,
+    val longestStreak: Int,
+    val mostCommonEmotion: String?,
+    val avgIntensity: Double,
+    val emotionDistribution: List<EmotionDistribution>,
+    val weekdayPattern: List<WeekdayStats>,
+)
+
 // ── Admin / Mood-Monitoring DTOs ──────────────────────────────────────────────
 
 @Serializable

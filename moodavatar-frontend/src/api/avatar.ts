@@ -46,6 +46,35 @@ export interface Avatar {
   updatedAt: string
 }
 
+export interface CalendarDay {
+  date: string           // YYYY-MM-DD
+  count: number
+  avgIntensity: number
+  dominantEmotion: string | null
+}
+
+export interface EmotionDistribution {
+  emotion: string
+  count: number
+  percentage: number
+}
+
+export interface WeekdayStats {
+  day: string            // MON, TUE, …
+  avgIntensity: number
+  count: number
+}
+
+export interface Insights {
+  totalEntries: number
+  currentStreak: number
+  longestStreak: number
+  mostCommonEmotion: string | null
+  avgIntensity: number
+  emotionDistribution: EmotionDistribution[]
+  weekdayPattern: WeekdayStats[]
+}
+
 export interface MoodEntry {
   emotion:   Emotion
   intensity: number
@@ -103,6 +132,12 @@ export const avatarApi = {
     const res = await http.get<BackendAvatar>(`/avatars/${userId}`, auth(token))
     return { data: flattenAvatar(res.data) }
   },
+
+  getCalendarData: (token: string, days = 90) =>
+    http.get<CalendarDay[]>(`/avatars/me/history/calendar?days=${days}`, auth(token)),
+
+  getInsights: (token: string) =>
+    http.get<Insights>('/avatars/me/insights', auth(token)),
 
   getPublicAvatar: async (userId: string) => {
     const res = await http.get<BackendAvatar>(`/avatars/public/${userId}`)
