@@ -101,6 +101,7 @@ const auth   = useAuthStore()
 
 const links = computed(() => [
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/insights',  label: 'Insights' },
   { to: '/profile',   label: 'Profil' },
   { to: '/friends',   label: 'Freunde' },
   ...(auth.user?.role === 'ADMIN' ? [{ to: '/admin', label: 'Admin' }] : []),

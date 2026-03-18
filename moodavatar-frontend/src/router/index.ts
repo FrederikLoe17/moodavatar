@@ -16,6 +16,7 @@ const router = createRouter({
     { path: '/admin',     component: () => import('../views/admin/AdminView.vue'), meta: { admin: true } },
     { path: '/u/:username',    component: () => import('../views/PublicProfileView.vue') },
     { path: '/room/:username', component: () => import('../views/RoomView.vue'), meta: { auth: true } },
+    { path: '/insights',       component: () => import('../views/InsightsView.vue'), meta: { auth: true } },
   ],
 })
 

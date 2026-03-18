@@ -93,6 +93,22 @@ fun Route.avatarRoutes(
                 call.respond(HttpStatusCode.OK, history)
             }
 
+            // GET /avatars/me/history/calendar – Kalender-Heatmap Daten
+            get("/me/history/calendar") {
+                val userId = call.userId() ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                val days =
+                    call.request.queryParameters["days"]
+                        ?.toIntOrNull()
+                        ?.coerceIn(7, 365) ?: 90
+                call.respond(HttpStatusCode.OK, avatarService.getCalendarData(userId, days))
+            }
+
+            // GET /avatars/me/insights – Insights & Statistiken
+            get("/me/insights") {
+                val userId = call.userId() ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                call.respond(HttpStatusCode.OK, avatarService.getInsights(userId))
+            }
+
             // GET /avatars/me/needs
             get("/me/needs") {
                 val userId = call.userId() ?: return@get call.respond(HttpStatusCode.Unauthorized)

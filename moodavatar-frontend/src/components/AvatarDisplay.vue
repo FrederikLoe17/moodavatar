@@ -195,6 +195,7 @@
       <ellipse cx="100" cy="197" rx="22" ry="5" fill="rgba(0,0,0,0.25)"/>
 
       <!-- Arms (behind torso) -->
+      <template v-if="pose">
       <path :d="pose.armL" :stroke="clothes" stroke-width="11" fill="none" stroke-linecap="round"/>
       <path :d="pose.armR" :stroke="clothes" stroke-width="11" fill="none" stroke-linecap="round"/>
       <!-- Hands -->
@@ -207,6 +208,7 @@
       <!-- Shoes -->
       <ellipse :cx="pose.shoeL[0]" :cy="pose.shoeL[1]" rx="13" ry="5" fill="#1e293b"/>
       <ellipse :cx="pose.shoeR[0]" :cy="pose.shoeR[1]" rx="13" ry="5" fill="#1e293b"/>
+      </template>
 
       <!-- Torso -->
       <path d="M 80,114 Q 100,111 120,114 L 122,150 Q 100,154 78,150 Z" :fill="clothes"/>

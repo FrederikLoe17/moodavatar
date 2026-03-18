@@ -102,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, defineComponent, h } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import AvatarDisplay from './AvatarDisplay.vue'
 import { avatarApi, type Emotion, type AvatarConfig } from '../api/avatar'
 import { useAuthStore } from '../stores/auth'

@@ -162,7 +162,7 @@
         <!-- Visitor shadow -->
         <ellipse :cx="VISITOR_POSITIONS[i]" cy="300" rx="18" ry="4.5" fill="rgba(0,0,0,0.18)"/>
         <!-- Visitor character (scale 0.62, ty 164) -->
-        <g :transform="`translate(${VISITOR_POSITIONS[i] - 62}, 164) scale(0.62, 0.62)`">
+        <g :transform="`translate(${(VISITOR_POSITIONS[i] ?? 0) - 62}, 164) scale(0.62, 0.62)`">
           <!-- Arms -->
           <path d="M 80,118 Q 67,134 61,150" :stroke="v.clothesColor ?? '#3b82f6'" stroke-width="11" fill="none" stroke-linecap="round"/>
           <path d="M 120,118 Q 133,134 139,150" :stroke="v.clothesColor ?? '#3b82f6'" stroke-width="11" fill="none" stroke-linecap="round"/>
@@ -580,9 +580,9 @@ const activityLabel = computed(() =>
 
 // ── Pose ──────────────────────────────────────────────────────────────────────
 const pose = computed((): Pose => {
-  const base = EMOTION_POSES[emotion.value] ?? EMOTION_POSES.NEUTRAL
-  if (isMoving.value) return WALK_POSES[walkStep.value]
-  if (activity.value === 'sitting') return { ...base, ...SITTING_POSE }
+  const base = (EMOTION_POSES[emotion.value] ?? EMOTION_POSES.NEUTRAL)!
+  if (isMoving.value) return WALK_POSES[walkStep.value as 0 | 1]
+  if (activity.value === 'sitting') return { ...base, ...SITTING_POSE } as Pose
   return base
 })
 
@@ -632,7 +632,7 @@ function scheduleNext(delay: number) {
 function pickNextSpot() {
   const pool  = MOOD_SPOTS[emotion.value] ?? MOOD_SPOTS.NEUTRAL
   // needs influence: low energy → more rug/sitting; low social → more window
-  let adjustedPool = [...pool]
+  let adjustedPool = [...(pool ?? [])]
   if (props.needs) {
     if (props.needs.energy < 30) {
       adjustedPool = [...adjustedPool, 'rug', 'rug', 'rug']
