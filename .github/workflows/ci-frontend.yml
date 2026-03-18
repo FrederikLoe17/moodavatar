@@ -30,7 +30,7 @@ jobs:
           cache-dependency-path: moodavatar-frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: TypeScript type-check
         run: npx vue-tsc --noEmit
