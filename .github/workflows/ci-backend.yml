@@ -1,0 +1,79 @@
+name: CI – Backend
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'AuthserviceClaude/**'
+      - 'user-service/**'
+      - 'avatar-service/**'
+      - 'api-gateway/**'
+      - 'realtime-service/**'
+      - 'notification-service/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'AuthserviceClaude/**'
+      - 'user-service/**'
+      - 'avatar-service/**'
+      - 'api-gateway/**'
+      - 'realtime-service/**'
+      - 'notification-service/**'
+
+jobs:
+  lint-and-test:
+    name: ktlint + test (${{ matrix.service.name }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: auth-service
+            dir: AuthserviceClaude
+          - name: user-service
+            dir: user-service
+          - name: avatar-service
+            dir: avatar-service
+          - name: api-gateway
+            dir: api-gateway
+          - name: realtime-service
+            dir: realtime-service
+          - name: notification-service
+            dir: notification-service
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ matrix.service.name }}-${{ hashFiles(format('{0}/gradle/wrapper/gradle-wrapper.properties', matrix.service.dir), format('{0}/build.gradle.kts', matrix.service.dir)) }}
+          restore-keys: gradle-${{ matrix.service.name }}-
+
+      - name: Make gradlew executable
+        run: chmod +x ${{ matrix.service.dir }}/gradlew
+
+      - name: ktlint check
+        working-directory: ${{ matrix.service.dir }}
+        run: ./gradlew ktlintCheck
+
+      - name: Run tests
+        working-directory: ${{ matrix.service.dir }}
+        run: ./gradlew test
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ matrix.service.name }}
+          path: ${{ matrix.service.dir }}/build/reports/tests/

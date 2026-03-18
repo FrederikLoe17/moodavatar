@@ -1,0 +1,232 @@
+services:
+
+  # ── Databases ─────────────────────────────────────────────────────────────
+
+  postgres-auth:
+    image: postgres:16-alpine
+    container_name: moodavatar-postgres-auth
+    environment:
+      POSTGRES_DB: moodavatar_auth
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  postgres-user:
+    image: postgres:16-alpine
+    container_name: moodavatar-postgres-user
+    environment:
+      POSTGRES_DB: moodavatar_user
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar_user"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mongodb:
+    image: mongo:7
+    container_name: moodavatar-avatar-mongo
+    environment:
+      MONGO_INITDB_DATABASE: moodavatar_avatar
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: moodavatar-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  redis:
+    image: redis:7-alpine
+    container_name: moodavatar-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: moodavatar-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  postgres-notification:
+    image: postgres:16-alpine
+    container_name: moodavatar-postgres-notification
+    environment:
+      POSTGRES_DB: moodavatar_notification
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d moodavatar_notification"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── Services ──────────────────────────────────────────────────────────────
+
+  auth-service:
+    build: ./AuthserviceClaude
+    container_name: moodavatar-auth
+    ports:
+      - "8081:8081"
+    environment:
+      DB_HOST: postgres-auth
+      DB_PORT: 5432
+      DB_NAME: moodavatar_auth
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      JWT_ACCESS_EXPIRY_MS: ${JWT_ACCESS_EXPIRY_MS}
+      JWT_REFRESH_EXPIRY_MS: ${JWT_REFRESH_EXPIRY_MS}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      APP_BASE_URL: ${APP_BASE_URL}
+      USER_SERVICE_URL: http://user-service:8082
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+
+  user-service:
+    build: ./user-service
+    container_name: moodavatar-user
+    ports:
+      - "8082:8082"
+    environment:
+      DB_HOST: postgres-user
+      DB_PORT: 5432
+      DB_NAME: moodavatar_user
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      AUTH_SERVICE_URL: http://auth-service:8081
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+
+  avatar-service:
+    build: ./avatar-service
+    container_name: moodavatar-avatar
+    ports:
+      - "8083:8083"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017
+      MONGO_DB: moodavatar_avatar
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: moodavatar-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE}
+      AUTH_SERVICE_URL: http://auth-service:8081
+      USER_SERVICE_URL: http://user-service:8082
+      AVATAR_SERVICE_URL: http://avatar-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+    depends_on:
+      - auth-service
+      - user-service
+      - avatar-service
+
+  realtime-service:
+    build: ./realtime-service
+    container_name: moodavatar-realtime
+    ports:
+      - "8084:8084"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      USER_SERVICE_URL: http://user-service:8082
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+
+  notification-service:
+    build: ./notification-service
+    container_name: moodavatar-notification
+    ports:
+      - "8085:8085"
+    environment:
+      DB_HOST: postgres-notification
+      DB_PORT: 5432
+      DB_NAME: moodavatar_notification
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    depends_on:
+      postgres-notification:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  postgres_auth_data:
+  postgres_user_data:
+  postgres_notification_data:
+  mongo_data:

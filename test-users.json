@@ -1,0 +1,21 @@
+{
+  "testUsers": [
+    {
+      "id": "0cce1bd5-314a-4755-ae9e-de688f147d36",
+      "username": "alice",
+      "email": "alice@moodavatar.de",
+      "password": "Secret123",
+      "role": "USER",
+      "status": "active"
+    },
+    {
+      "id": "ff889c39-e2c4-497b-9f2f-821a9d2cbfb1",
+      "username": "bob",
+      "email": "bob@moodavatar.de",
+      "password": "Secret123",
+      "role": "USER",
+      "status": "active"
+    }
+  ],
+  "note": "IDs change when docker volumes are reset. Last reset: 2026-03-11"
+}

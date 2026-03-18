@@ -1,0 +1,26 @@
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Eigene App: INFO -->
+    <logger name="com.moodavatar" level="INFO"/>
+
+    <!-- Ktor: nur Warnings -->
+    <logger name="io.ktor" level="WARN"/>
+
+    <!-- Exposed (SQL): nur Warnings – auf DEBUG setzen um SQL zu sehen -->
+    <logger name="Exposed" level="WARN"/>
+
+    <!-- Flyway: INFO damit Migrations sichtbar sind -->
+    <logger name="org.flywaydb" level="INFO"/>
+
+    <!-- HikariCP: nur Warnings -->
+    <logger name="com.zaxxer.hikari" level="WARN"/>
+
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

@@ -1,0 +1,39 @@
+# ── Secrets ───────────────────────────────────────────────────────────────────
+.env
+
+# ── Claude Code internal ──────────────────────────────────────────────────────
+.claude/
+
+# ── Gradle ────────────────────────────────────────────────────────────────────
+.gradle/
+build/
+*/build/
+*/.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+moodavatar-frontend/dist/
+moodavatar-frontend/.vite/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Kotlin / JVM ──────────────────────────────────────────────────────────────
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
