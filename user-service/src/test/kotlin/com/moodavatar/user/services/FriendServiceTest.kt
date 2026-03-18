@@ -16,7 +16,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FriendServiceTest {
-
     private val db = TestDatabase
     private val profileService = ProfileService()
     private val friendService = FriendService(events = null)
@@ -51,26 +50,29 @@ class FriendServiceTest {
 
     @Test
     fun `sendRequest throws CANNOT_ADD_SELF when sender equals receiver`() {
-        val ex = assertFailsWith<IllegalStateException> {
-            friendService.sendRequest(aliceId, aliceId)
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                friendService.sendRequest(aliceId, aliceId)
+            }
         assertEquals("CANNOT_ADD_SELF", ex.message)
     }
 
     @Test
     fun `sendRequest throws REQUEST_ALREADY_SENT for duplicate pending request`() {
         friendService.sendRequest(aliceId, bobId)
-        val ex = assertFailsWith<IllegalStateException> {
-            friendService.sendRequest(aliceId, bobId)
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                friendService.sendRequest(aliceId, bobId)
+            }
         assertEquals("REQUEST_ALREADY_SENT", ex.message)
     }
 
     @Test
     fun `sendRequest throws USER_NOT_FOUND for unknown receiver`() {
-        val ex = assertFailsWith<IllegalStateException> {
-            friendService.sendRequest(aliceId, UUID.randomUUID())
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                friendService.sendRequest(aliceId, UUID.randomUUID())
+            }
         assertEquals("USER_NOT_FOUND", ex.message)
     }
 
@@ -93,9 +95,10 @@ class FriendServiceTest {
     @Test
     fun `respondToRequest throws REQUEST_NOT_FOUND for wrong receiver`() {
         val request = friendService.sendRequest(aliceId, bobId)
-        val ex = assertFailsWith<IllegalStateException> {
-            friendService.respondToRequest(UUID.fromString(request.id), carolId, "ACCEPT")
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                friendService.respondToRequest(UUID.fromString(request.id), carolId, "ACCEPT")
+            }
         assertEquals("REQUEST_NOT_FOUND", ex.message)
     }
 
@@ -103,18 +106,20 @@ class FriendServiceTest {
     fun `respondToRequest throws REQUEST_ALREADY_HANDLED when request is not PENDING`() {
         val request = friendService.sendRequest(aliceId, bobId)
         friendService.respondToRequest(UUID.fromString(request.id), bobId, "ACCEPT")
-        val ex = assertFailsWith<IllegalStateException> {
-            friendService.respondToRequest(UUID.fromString(request.id), bobId, "ACCEPT")
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                friendService.respondToRequest(UUID.fromString(request.id), bobId, "ACCEPT")
+            }
         assertEquals("REQUEST_ALREADY_HANDLED", ex.message)
     }
 
     @Test
     fun `respondToRequest throws INVALID_ACTION for unknown action`() {
         val request = friendService.sendRequest(aliceId, bobId)
-        val ex = assertFailsWith<IllegalStateException> {
-            friendService.respondToRequest(UUID.fromString(request.id), bobId, "MAYBE")
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                friendService.respondToRequest(UUID.fromString(request.id), bobId, "MAYBE")
+            }
         assertEquals("INVALID_ACTION", ex.message)
     }
 

@@ -11,7 +11,6 @@ import com.moodavatar.auth.models.Users
 import org.jetbrains.exposed.sql.deleteAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.UUID
-import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,17 +21,17 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AuthServiceTest {
-
     private val db = TestDatabase // ensures container starts
     private val service = AuthService(TestDatabase.config)
 
     @BeforeTest
-    fun cleanDb() = transaction {
-        EmailVerifications.deleteAll()
-        PasswordResets.deleteAll()
-        RefreshTokens.deleteAll()
-        Users.deleteAll()
-    }
+    fun cleanDb() =
+        transaction {
+            EmailVerifications.deleteAll()
+            PasswordResets.deleteAll()
+            RefreshTokens.deleteAll()
+            Users.deleteAll()
+        }
 
     // ── register ──────────────────────────────────────────────────────────────
 
@@ -48,18 +47,20 @@ class AuthServiceTest {
     @Test
     fun `register throws EMAIL_TAKEN when email already exists`() {
         service.register(RegisterRequest("taken@example.com", "user1", "Password1"))
-        val ex = assertFailsWith<IllegalStateException> {
-            service.register(RegisterRequest("taken@example.com", "user2", "Password1"))
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.register(RegisterRequest("taken@example.com", "user2", "Password1"))
+            }
         assertEquals("EMAIL_TAKEN", ex.message)
     }
 
     @Test
     fun `register throws USERNAME_TAKEN when username already exists`() {
         service.register(RegisterRequest("a@example.com", "sameuser", "Password1"))
-        val ex = assertFailsWith<IllegalStateException> {
-            service.register(RegisterRequest("b@example.com", "sameuser", "Password1"))
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.register(RegisterRequest("b@example.com", "sameuser", "Password1"))
+            }
         assertEquals("USERNAME_TAKEN", ex.message)
     }
 
@@ -78,17 +79,19 @@ class AuthServiceTest {
     @Test
     fun `login throws INVALID_CREDENTIALS for wrong password`() {
         service.register(RegisterRequest("pw@example.com", "pwuser", "Password1"))
-        val ex = assertFailsWith<IllegalStateException> {
-            service.login(LoginRequest("pw@example.com", "WrongPassword1"))
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.login(LoginRequest("pw@example.com", "WrongPassword1"))
+            }
         assertEquals("INVALID_CREDENTIALS", ex.message)
     }
 
     @Test
     fun `login throws INVALID_CREDENTIALS for unknown email`() {
-        val ex = assertFailsWith<IllegalStateException> {
-            service.login(LoginRequest("nobody@example.com", "Password1"))
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.login(LoginRequest("nobody@example.com", "Password1"))
+            }
         assertEquals("INVALID_CREDENTIALS", ex.message)
     }
 
@@ -104,9 +107,10 @@ class AuthServiceTest {
 
     @Test
     fun `refresh throws INVALID_REFRESH_TOKEN for unknown token`() {
-        val ex = assertFailsWith<IllegalStateException> {
-            service.refresh(RefreshRequest("not-a-valid-token"))
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.refresh(RefreshRequest("not-a-valid-token"))
+            }
         assertEquals("INVALID_REFRESH_TOKEN", ex.message)
     }
 
@@ -117,9 +121,10 @@ class AuthServiceTest {
         service.register(RegisterRequest("logout@example.com", "logoutuser", "Password1"))
         val auth = service.login(LoginRequest("logout@example.com", "Password1"))
         service.logout(auth.refreshToken)
-        val ex = assertFailsWith<IllegalStateException> {
-            service.refresh(RefreshRequest(auth.refreshToken))
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.refresh(RefreshRequest(auth.refreshToken))
+            }
         assertEquals("TOKEN_REVOKED", ex.message)
     }
 
@@ -153,9 +158,10 @@ class AuthServiceTest {
         service.register(RegisterRequest("reuse@example.com", "reuseuser", "OldPassword1"))
         val (_, token) = service.createPasswordResetToken("reuse@example.com")!!
         service.resetPassword(token, "NewPassword1")
-        val ex = assertFailsWith<IllegalStateException> {
-            service.resetPassword(token, "AnotherPassword1")
-        }
+        val ex =
+            assertFailsWith<IllegalStateException> {
+                service.resetPassword(token, "AnotherPassword1")
+            }
         assertEquals("TOKEN_ALREADY_USED", ex.message)
     }
 

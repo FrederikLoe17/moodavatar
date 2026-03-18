@@ -16,15 +16,20 @@ data class UserAdminStatsResponse(
 )
 
 class AdminService {
-    fun getStats(): UserAdminStatsResponse = transaction {
-        UserAdminStatsResponse(
-            totalProfiles    = Profiles.selectAll().count(),
-            totalFriendships = FriendRequests.select {
-                FriendRequests.status eq FriendshipStatus.ACCEPTED
-            }.count(),
-            pendingRequests  = FriendRequests.select {
-                FriendRequests.status eq FriendshipStatus.PENDING
-            }.count(),
-        )
-    }
+    fun getStats(): UserAdminStatsResponse =
+        transaction {
+            UserAdminStatsResponse(
+                totalProfiles = Profiles.selectAll().count(),
+                totalFriendships =
+                    FriendRequests
+                        .select {
+                            FriendRequests.status eq FriendshipStatus.ACCEPTED
+                        }.count(),
+                pendingRequests =
+                    FriendRequests
+                        .select {
+                            FriendRequests.status eq FriendshipStatus.PENDING
+                        }.count(),
+            )
+        }
 }

@@ -7,13 +7,13 @@ data class RegisterRequest(
     val email: String,
     val username: String,
     val password: String,
-    val role: String = "USER"
+    val role: String = "USER",
 )
 
 @Serializable
 data class LoginRequest(
     val email: String,
-    val password: String
+    val password: String,
 )
 
 @Serializable
@@ -21,7 +21,7 @@ data class AuthResponse(
     val accessToken: String,
     val refreshToken: String,
     val tokenType: String = "Bearer",
-    val user: UserResponse
+    val user: UserResponse,
 )
 
 @Serializable
@@ -30,40 +30,40 @@ data class UserResponse(
     val email: String,
     val username: String,
     val role: String,
-    val isVerified: Boolean = false
+    val isVerified: Boolean = false,
 )
 
 @Serializable
 data class RefreshRequest(
-    val refreshToken: String
+    val refreshToken: String,
 )
 
 @Serializable
 data class RefreshResponse(
     val accessToken: String,
-    val tokenType: String = "Bearer"
+    val tokenType: String = "Bearer",
 )
 
 @Serializable
 data class ForgotPasswordRequest(
-    val email: String
+    val email: String,
 )
 
 @Serializable
 data class ResetPasswordRequest(
     val token: String,
-    val newPassword: String
+    val newPassword: String,
 )
 
 @Serializable
 data class MessageResponse(
-    val message: String
+    val message: String,
 )
 
 @Serializable
 data class ErrorResponse(
     val error: String,
-    val message: String
+    val message: String,
 )
 
 // ── Admin DTOs ────────────────────────────────────────────────────────────────
@@ -97,11 +97,15 @@ data class AdminStatsResponse(
 
 @Serializable
 data class UpdateRoleRequest(
-    val role: String
+    val role: String,
 )
 
 @Serializable
-data class VerifyEmailRequest(val token: String)
+data class VerifyEmailRequest(
+    val token: String,
+)
 
 @Serializable
-data class ResendVerificationRequest(val email: String)
+data class ResendVerificationRequest(
+    val email: String,
+)

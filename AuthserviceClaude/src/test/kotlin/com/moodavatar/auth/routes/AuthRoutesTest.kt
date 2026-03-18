@@ -32,7 +32,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class AuthRoutesTest {
-
     private val db = TestDatabase
     private val authService = AuthService(TestDatabase.config)
 
@@ -40,11 +39,13 @@ class AuthRoutesTest {
     // exceptions are caught inside the route handlers, so tests still pass.
     private val emailService = EmailService(TestDatabase.config)
     private val userServiceClient by lazy {
-        val httpClient = io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
-                io.ktor.serialization.kotlinx.json.json(Json { ignoreUnknownKeys = true })
+        val httpClient =
+            io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
+                install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+                    io.ktor.serialization.kotlinx.json
+                        .json(Json { ignoreUnknownKeys = true })
+                }
             }
-        }
         UserServiceClient(httpClient, "http://localhost:9999")
     }
 
@@ -55,156 +56,180 @@ class AuthRoutesTest {
     }
 
     @BeforeTest
-    fun cleanDb() = transaction {
-        EmailVerifications.deleteAll()
-        PasswordResets.deleteAll()
-        RefreshTokens.deleteAll()
-        Users.deleteAll()
-    }
+    fun cleanDb() =
+        transaction {
+            EmailVerifications.deleteAll()
+            PasswordResets.deleteAll()
+            RefreshTokens.deleteAll()
+            Users.deleteAll()
+        }
 
     // ── POST /auth/register ───────────────────────────────────────────────────
 
     @Test
-    fun `POST register returns 201 and user body for valid request`() = testApplication {
-        application { installTestApp() }
-        val response = client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"reg@test.com","username":"reguser","password":"Password1"}""")
+    fun `POST register returns 201 and user body for valid request`() =
+        testApplication {
+            application { installTestApp() }
+            val response =
+                client.post("/auth/register") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email":"reg@test.com","username":"reguser","password":"Password1"}""")
+                }
+            assertEquals(HttpStatusCode.Created, response.status)
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertEquals("reguser", body["username"]?.jsonPrimitive?.content)
         }
-        assertEquals(HttpStatusCode.Created, response.status)
-        val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-        assertEquals("reguser", body["username"]?.jsonPrimitive?.content)
-    }
 
     @Test
-    fun `POST register returns 409 when email is already taken`() = testApplication {
-        application { installTestApp() }
-        client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"dup@test.com","username":"user1","password":"Password1"}""")
+    fun `POST register returns 409 when email is already taken`() =
+        testApplication {
+            application { installTestApp() }
+            client.post("/auth/register") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"email":"dup@test.com","username":"user1","password":"Password1"}""")
+            }
+            val response =
+                client.post("/auth/register") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email":"dup@test.com","username":"user2","password":"Password1"}""")
+                }
+            assertEquals(HttpStatusCode.Conflict, response.status)
         }
-        val response = client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"dup@test.com","username":"user2","password":"Password1"}""")
-        }
-        assertEquals(HttpStatusCode.Conflict, response.status)
-    }
 
     // ── POST /auth/login ──────────────────────────────────────────────────────
 
     @Test
-    fun `POST login returns 200 and tokens for valid credentials`() = testApplication {
-        application { installTestApp() }
-        client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"login@test.com","username":"loginuser","password":"Password1"}""")
+    fun `POST login returns 200 and tokens for valid credentials`() =
+        testApplication {
+            application { installTestApp() }
+            client.post("/auth/register") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"email":"login@test.com","username":"loginuser","password":"Password1"}""")
+            }
+            val response =
+                client.post("/auth/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email":"login@test.com","password":"Password1"}""")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertTrue(body.containsKey("accessToken"))
+            assertTrue(body.containsKey("refreshToken"))
         }
-        val response = client.post("/auth/login") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"login@test.com","password":"Password1"}""")
-        }
-        assertEquals(HttpStatusCode.OK, response.status)
-        val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-        assertTrue(body.containsKey("accessToken"))
-        assertTrue(body.containsKey("refreshToken"))
-    }
 
     @Test
-    fun `POST login returns 401 for wrong password`() = testApplication {
-        application { installTestApp() }
-        client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"wrong@test.com","username":"wronguser","password":"Password1"}""")
+    fun `POST login returns 401 for wrong password`() =
+        testApplication {
+            application { installTestApp() }
+            client.post("/auth/register") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"email":"wrong@test.com","username":"wronguser","password":"Password1"}""")
+            }
+            val response =
+                client.post("/auth/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email":"wrong@test.com","password":"BadPassword1"}""")
+                }
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
-        val response = client.post("/auth/login") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"wrong@test.com","password":"BadPassword1"}""")
-        }
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
 
     @Test
-    fun `POST login returns 401 for unknown email`() = testApplication {
-        application { installTestApp() }
-        val response = client.post("/auth/login") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"nobody@test.com","password":"Password1"}""")
+    fun `POST login returns 401 for unknown email`() =
+        testApplication {
+            application { installTestApp() }
+            val response =
+                client.post("/auth/login") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"email":"nobody@test.com","password":"Password1"}""")
+                }
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
 
     // ── POST /auth/refresh ────────────────────────────────────────────────────
 
     @Test
-    fun `POST refresh returns 200 and new access token`() = testApplication {
-        application { installTestApp() }
-        client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"ref@test.com","username":"refuser","password":"Password1"}""")
-        }
-        val loginBody = Json.parseToJsonElement(
-            client.post("/auth/login") {
+    fun `POST refresh returns 200 and new access token`() =
+        testApplication {
+            application { installTestApp() }
+            client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
-                setBody("""{"email":"ref@test.com","password":"Password1"}""")
-            }.bodyAsText(),
-        ).jsonObject
-        val refreshToken = loginBody["refreshToken"]!!.jsonPrimitive.content
+                setBody("""{"email":"ref@test.com","username":"refuser","password":"Password1"}""")
+            }
+            val loginBody =
+                Json
+                    .parseToJsonElement(
+                        client
+                            .post("/auth/login") {
+                                contentType(ContentType.Application.Json)
+                                setBody("""{"email":"ref@test.com","password":"Password1"}""")
+                            }.bodyAsText(),
+                    ).jsonObject
+            val refreshToken = loginBody["refreshToken"]!!.jsonPrimitive.content
 
-        val response = client.post("/auth/refresh") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"refreshToken":"$refreshToken"}""")
+            val response =
+                client.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"refreshToken":"$refreshToken"}""")
+                }
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertTrue(body.containsKey("accessToken"))
         }
-        assertEquals(HttpStatusCode.OK, response.status)
-        val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-        assertTrue(body.containsKey("accessToken"))
-    }
 
     @Test
-    fun `POST refresh returns 401 for invalid token`() = testApplication {
-        application { installTestApp() }
-        val response = client.post("/auth/refresh") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"refreshToken":"garbage-token"}""")
+    fun `POST refresh returns 401 for invalid token`() =
+        testApplication {
+            application { installTestApp() }
+            val response =
+                client.post("/auth/refresh") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"refreshToken":"garbage-token"}""")
+                }
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
 
     // ── GET /auth/me ──────────────────────────────────────────────────────────
 
     @Test
-    fun `GET me returns 401 without Authorization header`() = testApplication {
-        application { installTestApp() }
-        val response = client.get("/auth/me")
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
-    }
+    fun `GET me returns 401 without Authorization header`() =
+        testApplication {
+            application { installTestApp() }
+            val response = client.get("/auth/me")
+            assertEquals(HttpStatusCode.Unauthorized, response.status)
+        }
 
     @Test
-    fun `GET me returns 200 with valid JWT`() = testApplication {
-        application { installTestApp() }
-        client.post("/auth/register") {
-            contentType(ContentType.Application.Json)
-            setBody("""{"email":"me@test.com","username":"meuser","password":"Password1"}""")
-        }
-        val loginBody = Json.parseToJsonElement(
-            client.post("/auth/login") {
+    fun `GET me returns 200 with valid JWT`() =
+        testApplication {
+            application { installTestApp() }
+            client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
-                setBody("""{"email":"me@test.com","password":"Password1"}""")
-            }.bodyAsText(),
-        ).jsonObject
-        val token = loginBody["accessToken"]!!.jsonPrimitive.content
+                setBody("""{"email":"me@test.com","username":"meuser","password":"Password1"}""")
+            }
+            val loginBody =
+                Json
+                    .parseToJsonElement(
+                        client
+                            .post("/auth/login") {
+                                contentType(ContentType.Application.Json)
+                                setBody("""{"email":"me@test.com","password":"Password1"}""")
+                            }.bodyAsText(),
+                    ).jsonObject
+            val token = loginBody["accessToken"]!!.jsonPrimitive.content
 
-        val response = client.get("/auth/me") { bearerAuth(token) }
-        assertEquals(HttpStatusCode.OK, response.status)
-        val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-        assertEquals("me@test.com", body["email"]?.jsonPrimitive?.content)
-    }
+            val response = client.get("/auth/me") { bearerAuth(token) }
+            assertEquals(HttpStatusCode.OK, response.status)
+            val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            assertEquals("me@test.com", body["email"]?.jsonPrimitive?.content)
+        }
 
     // ── GET /auth/health ──────────────────────────────────────────────────────
 
     @Test
-    fun `GET health returns 200`() = testApplication {
-        application { installTestApp() }
-        val response = client.get("/auth/health")
-        assertEquals(HttpStatusCode.OK, response.status)
-    }
+    fun `GET health returns 200`() =
+        testApplication {
+            application { installTestApp() }
+            val response = client.get("/auth/health")
+            assertEquals(HttpStatusCode.OK, response.status)
+        }
 }

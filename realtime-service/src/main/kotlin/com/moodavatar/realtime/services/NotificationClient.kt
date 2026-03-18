@@ -23,12 +23,21 @@ class NotificationClient(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun createNotification(userId: String, type: String, fromUserId: String, fromUsername: String) {
+    suspend fun createNotification(
+        userId: String,
+        type: String,
+        fromUserId: String,
+        fromUsername: String,
+    ) {
         try {
             httpClient.post("$baseUrl/notifications/internal/create") {
                 contentType(ContentType.Application.Json)
-                setBody(json.encodeToString(CreateNotificationRequest.serializer(),
-                    CreateNotificationRequest(userId, type, fromUserId, fromUsername)))
+                setBody(
+                    json.encodeToString(
+                        CreateNotificationRequest.serializer(),
+                        CreateNotificationRequest(userId, type, fromUserId, fromUsername),
+                    ),
+                )
             }
         } catch (e: Exception) {
             log.warn("Failed to create notification for $userId: ${e.message}")

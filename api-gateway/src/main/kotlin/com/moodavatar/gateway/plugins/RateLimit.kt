@@ -8,22 +8,27 @@ import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
-class RateLimiter(private val maxPerMinute: Int = 120) {
-
-    private data class Bucket(val count: AtomicInteger, val resetAt: Long)
+class RateLimiter(
+    private val maxPerMinute: Int = 120,
+) {
+    private data class Bucket(
+        val count: AtomicInteger,
+        val resetAt: Long,
+    )
 
     private val buckets = ConcurrentHashMap<String, Bucket>()
 
     fun isAllowed(ip: String): Boolean {
         val now = System.currentTimeMillis()
-        val bucket = buckets.compute(ip) { _, existing ->
-            if (existing == null || now >= existing.resetAt)
-                Bucket(AtomicInteger(1), now + 60_000)
-            else {
-                existing.count.incrementAndGet()
-                existing
-            }
-        }!!
+        val bucket =
+            buckets.compute(ip) { _, existing ->
+                if (existing == null || now >= existing.resetAt) {
+                    Bucket(AtomicInteger(1), now + 60_000)
+                } else {
+                    existing.count.incrementAndGet()
+                    existing
+                }
+            }!!
         return bucket.count.get() <= maxPerMinute
     }
 
@@ -34,27 +39,39 @@ class RateLimiter(private val maxPerMinute: Int = 120) {
 }
 
 @Serializable
-data class RateLimitError(val error: String, val message: String)
+data class RateLimitError(
+    val error: String,
+    val message: String,
+)
 
-val RateLimitPlugin = createApplicationPlugin("RateLimit", { }) {
-    val limiter = RateLimiter(
-        maxPerMinute = application.environment.config
-            .propertyOrNull("gateway.rateLimitPerMin")?.getString()?.toIntOrNull() ?: 120
-    )
-
-    onCall { call ->
-        val ip = call.request.headers["X-Forwarded-For"]?.split(",")?.first()?.trim()
-            ?: call.request.local.remoteHost
-
-        if (!limiter.isAllowed(ip)) {
-            call.response.headers.append("X-RateLimit-Limit",     "120")
-            call.response.headers.append("X-RateLimit-Remaining", "0")
-            call.respond(
-                HttpStatusCode.TooManyRequests,
-                RateLimitError("RATE_LIMIT_EXCEEDED", "Too many requests. Try again in a minute.")
+val RateLimitPlugin =
+    createApplicationPlugin("RateLimit", { }) {
+        val limiter =
+            RateLimiter(
+                maxPerMinute =
+                    application.environment.config
+                        .propertyOrNull("gateway.rateLimitPerMin")
+                        ?.getString()
+                        ?.toIntOrNull() ?: 120,
             )
-            return@onCall
+
+        onCall { call ->
+            val ip =
+                call.request.headers["X-Forwarded-For"]
+                    ?.split(",")
+                    ?.first()
+                    ?.trim()
+                    ?: call.request.local.remoteHost
+
+            if (!limiter.isAllowed(ip)) {
+                call.response.headers.append("X-RateLimit-Limit", "120")
+                call.response.headers.append("X-RateLimit-Remaining", "0")
+                call.respond(
+                    HttpStatusCode.TooManyRequests,
+                    RateLimitError("RATE_LIMIT_EXCEEDED", "Too many requests. Try again in a minute."),
+                )
+                return@onCall
+            }
+            call.response.headers.append("X-RateLimit-Remaining", limiter.remaining(ip).toString())
         }
-        call.response.headers.append("X-RateLimit-Remaining", limiter.remaining(ip).toString())
     }
-}

@@ -13,14 +13,21 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import kotlinx.serialization.Serializable
 
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+fun main(args: Array<String>): Unit =
+    io.ktor.server.netty.EngineMain
+        .main(args)
 
 @Serializable
-private data class GatewayErrorResponse(val error: String, val message: String)
+private data class GatewayErrorResponse(
+    val error: String,
+    val message: String,
+)
 
 fun Application.module() {
-    val allowedOrigin = environment.config
-        .propertyOrNull("gateway.allowedOrigin")?.getString() ?: "http://localhost:5173"
+    val allowedOrigin =
+        environment.config
+            .propertyOrNull("gateway.allowedOrigin")
+            ?.getString() ?: "http://localhost:5173"
 
     // ── Content Negotiation ──────────────────────────────────────────────────
     install(ContentNegotiation) {
@@ -29,8 +36,10 @@ fun Application.module() {
 
     // ── CORS ─────────────────────────────────────────────────────────────────
     install(CORS) {
-        allowHost(allowedOrigin.removePrefix("http://").removePrefix("https://"),
-            schemes = listOf(if (allowedOrigin.startsWith("https")) "https" else "http"))
+        allowHost(
+            allowedOrigin.removePrefix("http://").removePrefix("https://"),
+            schemes = listOf(if (allowedOrigin.startsWith("https")) "https" else "http"),
+        )
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowMethod(HttpMethod.Get)
@@ -52,18 +61,19 @@ fun Application.module() {
             call.application.log.error("Unhandled error", cause)
             call.respond(
                 HttpStatusCode.BadGateway,
-                GatewayErrorResponse("BAD_GATEWAY", "Upstream service unavailable")
+                GatewayErrorResponse("BAD_GATEWAY", "Upstream service unavailable"),
             )
         }
     }
 
     // ── HTTP Client (for proxying) ───────────────────────────────────────────
-    val httpClient = HttpClient(CIO) {
-        expectSuccess = false
-        engine {
-            requestTimeout = 30_000
+    val httpClient =
+        HttpClient(CIO) {
+            expectSuccess = false
+            engine {
+                requestTimeout = 30_000
+            }
         }
-    }
 
     // ── Routing ──────────────────────────────────────────────────────────────
     configureRouting(httpClient)

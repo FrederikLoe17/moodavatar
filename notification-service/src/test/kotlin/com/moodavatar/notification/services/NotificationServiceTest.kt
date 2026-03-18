@@ -14,7 +14,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class NotificationServiceTest {
-
     private lateinit var service: NotificationService
     private val userId = UUID.randomUUID().toString()
     private val fromUserId = UUID.randomUUID().toString()
@@ -27,9 +26,10 @@ class NotificationServiceTest {
     }
 
     @AfterTest
-    fun cleanDb() = transaction {
-        Notifications.deleteAll()
-    }
+    fun cleanDb() =
+        transaction {
+            Notifications.deleteAll()
+        }
 
     private fun createNotification(
         type: String = "FRIEND_REQUEST",

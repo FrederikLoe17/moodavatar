@@ -10,8 +10,14 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
-@Serializable data class UnreadCountResponse(val count: Int)
-@Serializable data class MessageResponse(val message: String)
+@Serializable data class UnreadCountResponse(
+    val count: Int,
+)
+
+@Serializable data class MessageResponse(
+    val message: String,
+)
+
 @Serializable data class CreateNotificationRequest(
     val userId: String,
     val type: String,
@@ -19,8 +25,7 @@ import kotlinx.serialization.Serializable
     val fromUsername: String,
 )
 
-private fun ApplicationCall.userId(): String? =
-    principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+private fun ApplicationCall.userId(): String? = principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
 
 fun Route.notificationRoutes(service: NotificationService) {
     // Internal endpoint — called by other services (no user JWT required)
@@ -32,7 +37,6 @@ fun Route.notificationRoutes(service: NotificationService) {
 
     authenticate("auth-jwt") {
         route("/notifications") {
-
             // GET /notifications
             get {
                 val userId = call.userId() ?: return@get call.respond(HttpStatusCode.Unauthorized)
@@ -55,10 +59,13 @@ fun Route.notificationRoutes(service: NotificationService) {
             // POST /notifications/{id}/read
             post("/{id}/read") {
                 val userId = call.userId() ?: return@post call.respond(HttpStatusCode.Unauthorized)
-                val id     = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+                val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
                 val ok = service.markRead(id, userId)
-                if (ok) call.respond(MessageResponse("Marked as read"))
-                else    call.respond(HttpStatusCode.NotFound)
+                if (ok) {
+                    call.respond(MessageResponse("Marked as read"))
+                } else {
+                    call.respond(HttpStatusCode.NotFound)
+                }
             }
         }
     }

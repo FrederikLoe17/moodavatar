@@ -6,8 +6,8 @@ import com.mongodb.client.MongoDatabase
 import io.ktor.server.application.*
 
 fun Application.configureDatabase(): MongoDatabase {
-    val cfg  = environment.config
-    val uri  = cfg.property("mongodb.uri").getString()
+    val cfg = environment.config
+    val uri = cfg.property("mongodb.uri").getString()
     val name = cfg.property("mongodb.db").getString()
 
     val client: MongoClient = MongoClients.create(uri)

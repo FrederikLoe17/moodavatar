@@ -14,6 +14,7 @@ ktlint {
     outputToConsole.set(true)
     filter {
         exclude("**/generated/**")
+        exclude("**/*.kts")
     }
 }
 

@@ -10,7 +10,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConnectionManagerTest {
-
     private val aliceSession = mockk<WebSocketSession>(relaxed = true)
     private val bobSession = mockk<WebSocketSession>(relaxed = true)
 
@@ -72,28 +71,31 @@ class ConnectionManagerTest {
     // ── sendTo ────────────────────────────────────────────────────────────────
 
     @Test
-    fun `sendTo returns true and sends frame when user is connected`() = runBlocking {
-        ConnectionManager.connect(alice)
-        val result = ConnectionManager.sendTo(alice.userId, """{"type":"ping"}""")
-        assertTrue(result)
-    }
+    fun `sendTo returns true and sends frame when user is connected`() =
+        runBlocking {
+            ConnectionManager.connect(alice)
+            val result = ConnectionManager.sendTo(alice.userId, """{"type":"ping"}""")
+            assertTrue(result)
+        }
 
     @Test
-    fun `sendTo returns false when user is not connected`() = runBlocking {
-        val result = ConnectionManager.sendTo("offline-user", """{"type":"ping"}""")
-        assertFalse(result)
-    }
+    fun `sendTo returns false when user is not connected`() =
+        runBlocking {
+            val result = ConnectionManager.sendTo("offline-user", """{"type":"ping"}""")
+            assertFalse(result)
+        }
 
     @Test
-    fun `sendTo returns false and removes user when session throws`() = runBlocking {
-        val failingSession = mockk<WebSocketSession>(relaxed = true)
-        coEvery { failingSession.send(any()) } throws Exception("Connection closed")
-        val failingUser = ConnectedUser("failing-user", "failer", failingSession)
-        ConnectionManager.connect(failingUser)
-        val result = ConnectionManager.sendTo(failingUser.userId, "payload")
-        assertFalse(result)
-        assertFalse(ConnectionManager.isOnline(failingUser.userId))
-    }
+    fun `sendTo returns false and removes user when session throws`() =
+        runBlocking {
+            val failingSession = mockk<WebSocketSession>(relaxed = true)
+            coEvery { failingSession.send(any()) } throws Exception("Connection closed")
+            val failingUser = ConnectedUser("failing-user", "failer", failingSession)
+            ConnectionManager.connect(failingUser)
+            val result = ConnectionManager.sendTo(failingUser.userId, "payload")
+            assertFalse(result)
+            assertFalse(ConnectionManager.isOnline(failingUser.userId))
+        }
 
     // ── encode ────────────────────────────────────────────────────────────────
 

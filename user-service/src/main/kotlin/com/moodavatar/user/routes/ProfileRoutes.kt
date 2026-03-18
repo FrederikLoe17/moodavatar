@@ -13,7 +13,6 @@ import java.util.UUID
 
 fun Route.profileRoutes(profileService: ProfileService) {
     route("/users") {
-
         // GET /users/health
         get("/health") {
             call.respond(HttpStatusCode.OK, MessageResponse("ok"))
@@ -29,46 +28,52 @@ fun Route.profileRoutes(profileService: ProfileService) {
 
         // GET /users/public/{username} – Öffentliches Profil (kein Auth nötig)
         get("/public/{username}") {
-            val username = call.parameters["username"]?.trim()
-                ?: return@get call.respond(HttpStatusCode.BadRequest)
-            val profile = profileService.getProfileByUsername(username)
-                ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("NOT_FOUND", "User not found"))
+            val username =
+                call.parameters["username"]?.trim()
+                    ?: return@get call.respond(HttpStatusCode.BadRequest)
+            val profile =
+                profileService.getProfileByUsername(username)
+                    ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("NOT_FOUND", "User not found"))
             call.respond(HttpStatusCode.OK, profile)
         }
 
         authenticate("auth-jwt") {
-
             // GET /users/me
             get("/me") {
                 val userId = call.userId() ?: return@get call.respond(HttpStatusCode.Unauthorized)
-                val profile = profileService.getProfile(userId)
-                    ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("NOT_FOUND", "Profile not found"))
+                val profile =
+                    profileService.getProfile(userId)
+                        ?: return@get call.respond(HttpStatusCode.NotFound, ErrorResponse("NOT_FOUND", "Profile not found"))
                 call.respond(HttpStatusCode.OK, profile)
             }
 
             // PUT /users/me
             put("/me") {
                 val userId = call.userId() ?: return@put call.respond(HttpStatusCode.Unauthorized)
-                val req    = call.receive<UpdateProfileRequest>()
-                val updated = profileService.updateProfile(userId, req)
-                    ?: return@put call.respond(HttpStatusCode.NotFound)
+                val req = call.receive<UpdateProfileRequest>()
+                val updated =
+                    profileService.updateProfile(userId, req)
+                        ?: return@put call.respond(HttpStatusCode.NotFound)
                 call.respond(HttpStatusCode.OK, updated)
             }
 
             // GET /users/search?q=username
             get("/search") {
                 val query = call.request.queryParameters["q"]?.trim()
-                if (query.isNullOrBlank())
+                if (query.isNullOrBlank()) {
                     return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse("MISSING_QUERY", "Query parameter 'q' is required"))
+                }
                 call.respond(HttpStatusCode.OK, profileService.searchProfiles(query))
             }
 
             // GET /users/{id}
             get("/{id}") {
-                val id = call.parameters["id"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-                    ?: return@get call.respond(HttpStatusCode.BadRequest)
-                val profile = profileService.getProfile(id)
-                    ?: return@get call.respond(HttpStatusCode.NotFound)
+                val id =
+                    call.parameters["id"]?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                        ?: return@get call.respond(HttpStatusCode.BadRequest)
+                val profile =
+                    profileService.getProfile(id)
+                        ?: return@get call.respond(HttpStatusCode.NotFound)
                 call.respond(HttpStatusCode.OK, profile)
             }
         }
@@ -76,5 +81,8 @@ fun Route.profileRoutes(profileService: ProfileService) {
 }
 
 fun ApplicationCall.userId(): UUID? =
-    principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+    principal<JWTPrincipal>()
+        ?.payload
+        ?.getClaim("userId")
+        ?.asString()
         ?.let { runCatching { UUID.fromString(it) }.getOrNull() }

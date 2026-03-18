@@ -6,7 +6,6 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import io.ktor.server.auth.jwt.*
 
 object JwtUtils {
-
     /**
      * Extrahiert die userId aus einem JWTPrincipal (für geschützte Routen)
      */
@@ -24,8 +23,7 @@ object JwtUtils {
     /**
      * Dekodiert einen JWT-Token ohne Verifikation (z.B. für Logging)
      */
-    fun decode(token: String): DecodedJWT =
-        JWT.decode(token)
+    fun decode(token: String): DecodedJWT = JWT.decode(token)
 
     /**
      * Prüft ob ein Token abgelaufen ist (ohne Verifikation)
@@ -44,12 +42,14 @@ object JwtUtils {
         issuer: String,
         audience: String,
         claims: Map<String, String>,
-        expiresAt: java.util.Date
+        expiresAt: java.util.Date,
     ): String {
-        var builder = JWT.create()
-            .withIssuer(issuer)
-            .withAudience(audience)
-            .withExpiresAt(expiresAt)
+        var builder =
+            JWT
+                .create()
+                .withIssuer(issuer)
+                .withAudience(audience)
+                .withExpiresAt(expiresAt)
 
         claims.forEach { (k, v) -> builder = builder.withClaim(k, v) }
 

@@ -7,21 +7,25 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 
 fun Application.configureSecurity() {
-    val secret   = environment.config.property("jwt.secret").getString()
-    val issuer   = environment.config.property("jwt.issuer").getString()
+    val secret = environment.config.property("jwt.secret").getString()
+    val issuer = environment.config.property("jwt.issuer").getString()
     val audience = environment.config.property("jwt.audience").getString()
 
     install(Authentication) {
         jwt("auth-jwt") {
             verifier(
-                JWT.require(Algorithm.HMAC256(secret))
+                JWT
+                    .require(Algorithm.HMAC256(secret))
                     .withIssuer(issuer)
                     .withAudience(audience)
-                    .build()
+                    .build(),
             )
             validate { credential ->
-                if (credential.payload.getClaim("userId").asString() != null) JWTPrincipal(credential.payload)
-                else null
+                if (credential.payload.getClaim("userId").asString() != null) {
+                    JWTPrincipal(credential.payload)
+                } else {
+                    null
+                }
             }
         }
     }

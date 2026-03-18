@@ -8,7 +8,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RoomManagerTest {
-
     private val owner1 = "owner-1"
     private val owner2 = "owner-2"
     private val alice = RoomVisitor("user-alice", "alice", emotion = "happy")

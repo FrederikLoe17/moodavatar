@@ -16,15 +16,15 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProfileServiceTest {
-
     private val db = TestDatabase
     private val service = ProfileService()
 
     @BeforeTest
-    fun cleanDb() = transaction {
-        FriendRequests.deleteAll()
-        Profiles.deleteAll()
-    }
+    fun cleanDb() =
+        transaction {
+            FriendRequests.deleteAll()
+            Profiles.deleteAll()
+        }
 
     // ── createProfile ─────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
-val ktor_version    = "2.3.7"
-val kotlin_version  = "1.9.22"
+val ktor_version = "2.3.7"
+val kotlin_version = "1.9.22"
 val logback_version = "1.4.14"
 
 plugins {
@@ -14,10 +14,11 @@ ktlint {
     outputToConsole.set(true)
     filter {
         exclude("**/generated/**")
+        exclude("**/*.kts")
     }
 }
 
-group   = "com.moodavatar"
+group = "com.moodavatar"
 version = "0.0.1"
 
 application {

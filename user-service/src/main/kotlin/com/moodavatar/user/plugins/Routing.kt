@@ -12,8 +12,8 @@ import io.ktor.server.routing.*
 
 fun Application.configureRouting(eventPublisher: EventPublisher?) {
     val profileService = ProfileService()
-    val friendService  = FriendService(eventPublisher)
-    val adminService   = AdminService()
+    val friendService = FriendService(eventPublisher)
+    val adminService = AdminService()
     routing {
         profileRoutes(profileService)
         friendRoutes(friendService)
