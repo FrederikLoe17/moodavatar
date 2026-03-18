@@ -79,8 +79,15 @@ fix/*     ← Bug-Fixes      (z.B. fix/avatar-flicker)
 1. Neuen Branch von `develop` erstellen: `git checkout -b feature/<name>`
 2. Änderungen umsetzen + ktlint-clean halten
 3. Commit(s) mit aussagekräftigen Messages
-4. **Vor dem PR**: `./gradlew ktlintCheck` in jedem geänderten Service ausführen — kein PR ohne grünen ktlint
+4. **Vor dem PR — Pflicht-Checks** (Docker muss laufen für Testcontainers):
+   ```bash
+   cd <service> && ./gradlew ktlintCheck test
+   ```
+   Für alle geänderten Services ausführen — kein PR ohne grüne lokale Checks.
 5. PR gegen `develop` mit `gh pr create` — du reviewst, mergst, done
+
+> `gh` liegt unter `C:\Program Files\GitHub CLI\` und ist nicht im Standard-PATH.
+> Immer `export PATH="$PATH:/c/Program Files/GitHub CLI"` voranstellen.
 
 ### Commits
 - Format: `<type>(<scope>): <kurze Beschreibung>` (Conventional Commits)
@@ -140,15 +147,71 @@ Merge nur wenn alle Checks grün sind.
 - Jede neue Service-Methode (Business-Logik) bekommt Unit-Tests — reine Datenbank-/HTTP-Handler sind optional
 - Test-Framework: **Kotlin Test** + **MockK** für Mocks
 - Tests liegen unter `src/test/kotlin/` (spiegelt Package-Struktur)
-- Benennung: `<KlassenName>Test.kt`, Testmethoden als `@Test fun should<Verhalten>When<Kontext>()`
-- Tests laufen mit `./gradlew test`
+- Benennung: `<KlassenName>Test.kt`, Testmethoden als `` @Test fun `beschreibung`() ``
+- Tests laufen mit `./gradlew test` — **Docker muss laufen** (auth-service, user-service nutzen Testcontainers)
 - Beim Hinzufügen von Features: zuerst prüfen ob bestehende Tests betroffen sind, dann neue Tests ergänzen
 
+#### Bekannte Test-Gotchas (hart gelernt)
+
+**JUnit 4: `@BeforeTest`/`@AfterTest` müssen `Unit` zurückgeben**
+JUnit 4 verlangt `void`-Rückgabe. Expression Body mit `deleteAll()` gibt `Int` zurück → `InvalidTestClassError`.
+```kotlin
+// FALSCH — gibt Int zurück
+@BeforeTest
+fun cleanDb() = transaction { Users.deleteAll() }
+
+// RICHTIG — expliziter Block-Body
+@BeforeTest
+fun cleanDb() {
+    transaction { Users.deleteAll() }
+}
+```
+
+**`testApplication` lädt echte `application.conf` — `${JWT_SECRET}` nicht auflösbar**
+Ktor-Route-Tests mit `configureSecurity()` schlagen fehl mit `ConfigException$UnresolvedSubstitution`.
+Fix: Test-Config als Environment übergeben, am besten via Helper:
+```kotlin
+private fun routeTest(block: suspend ApplicationTestBuilder.() -> Unit) =
+    testApplication {
+        environment { config = TestDatabase.config }
+        application { installTestApp() }
+        block()
+    }
+```
+
+**MockK: Kotlin-stdlib Extension-Funktionen nicht direkt stubbbar**
+`every { mockIterable.firstOrNull() } returns doc` → `ClassCastException` zur Laufzeit.
+Stattdessen die zugrundeliegende Interface-Methode mocken:
+```kotlin
+val mockCursor = mockk<MongoCursor<Document>>()
+every { mockIterable.iterator() } returns mockCursor
+every { mockCursor.hasNext() } returns true
+every { mockCursor.next() } returns doc
+```
+
+**ktlint bricht vollqualifizierte Funktionsnamen über Zeilengrenzen auf**
+`io.ktor.serialization.kotlinx.json.json(...)` wird zu zwei Zeilen → Compiler-Fehler, weil Packages keine Werte sind.
+Fix: Expliziten Import hinzufügen statt vollqualifizierten Namen:
+```kotlin
+import io.ktor.serialization.kotlinx.json.json
+// dann einfach:
+json(Json { ignoreUnknownKeys = true })
+```
+
+**Testcontainers: Singleton-Pattern für geteilte DB**
+Container nur einmal starten (teuer!), nicht pro Test-Klasse. Pattern: Kotlin `object` mit `init`-Block.
+Siehe `TestDatabase.kt` in auth-service und user-service als Referenz.
+
+**H2 vs PostgreSQL: `customEnumeration` inkompatibel**
+Tabellen mit `customEnumeration` (PGobject für Enums) laufen nicht auf H2.
+→ auth-service und user-service: immer Testcontainers (echtes PostgreSQL)
+→ notification-service: H2 kompatibel (keine PGobject-Typen)
+
 ### Dependency-Management (Backend)
-- Versionen werden in `gradle/libs.versions.toml` (Version Catalog) gepflegt — keine hardcodierten Versionen in `build.gradle.kts`
-- Bei neuen Features: prüfen ob benötigte Library bereits im Catalog vorhanden ist, bevor eine neue hinzugefügt wird
-- Ktor, Kotlin, Exposed, Koin etc. regelmäßig auf aktuellen Stand bringen — breaking changes vor Upgrade prüfen
-- `./gradlew dependencyUpdates` (ben. Plugin `com.github.ben-manes.versions`) zeigt veraltete Dependencies
+- Versionen aktuell als Variablen in den jeweiligen `build.gradle.kts` — kein zentraler Version Catalog (noch nicht migriert)
+- Bei neuen Features: erst prüfen ob benötigte Library bereits in einem anderen Service vorhanden ist (Versionskonsistenz)
+- Ktor, Kotlin, Exposed etc. regelmäßig aktualisieren — breaking changes vor Upgrade prüfen
+- Aktuelle Basis-Versionen: Kotlin 1.9.23, Ktor 2.3.10, Exposed 0.44.1, ktlint 1.3.1
 
 ### RabbitMQ
 - Exchange: `moodavatar.events` (topic)
