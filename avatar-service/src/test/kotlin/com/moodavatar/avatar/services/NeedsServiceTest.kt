@@ -2,6 +2,7 @@ package com.moodavatar.avatar.services
 
 import com.mongodb.client.FindIterable
 import com.mongodb.client.MongoCollection
+import com.mongodb.client.MongoCursor
 import com.mongodb.client.MongoDatabase
 import io.mockk.every
 import io.mockk.mockk
@@ -29,7 +30,14 @@ class NeedsServiceTest {
     private fun stubFind(doc: Document?) {
         val mockIterable = mockk<FindIterable<Document>>()
         every { mockCollection.find(any<Document>()) } returns mockIterable
-        every { mockIterable.firstOrNull() } returns doc
+        val mockCursor = mockk<MongoCursor<Document>>()
+        every { mockIterable.iterator() } returns mockCursor
+        if (doc != null) {
+            every { mockCursor.hasNext() } returns true
+            every { mockCursor.next() } returns doc
+        } else {
+            every { mockCursor.hasNext() } returns false
+        }
     }
 
     // ── no record (doc == null) ───────────────────────────────────────────────

@@ -25,13 +25,14 @@ class AuthServiceTest {
     private val service = AuthService(TestDatabase.config)
 
     @BeforeTest
-    fun cleanDb() =
+    fun cleanDb() {
         transaction {
             EmailVerifications.deleteAll()
             PasswordResets.deleteAll()
             RefreshTokens.deleteAll()
             Users.deleteAll()
         }
+    }
 
     // ── register ──────────────────────────────────────────────────────────────
 

@@ -20,11 +20,12 @@ class ProfileServiceTest {
     private val service = ProfileService()
 
     @BeforeTest
-    fun cleanDb() =
+    fun cleanDb() {
         transaction {
             FriendRequests.deleteAll()
             Profiles.deleteAll()
         }
+    }
 
     // ── createProfile ─────────────────────────────────────────────────────────
 

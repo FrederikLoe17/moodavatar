@@ -1,6 +1,5 @@
 package com.moodavatar.auth.utils
 
-import com.moodavatar.auth.utils.JwtUtils.isExpired
 import java.util.Date
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -69,7 +68,7 @@ class JwtUtilsTest {
                 claims = emptyMap(),
                 expiresAt = Date(System.currentTimeMillis() + 60_000),
             )
-        assertFalse(token.isExpired())
+        assertFalse(JwtUtils.isExpired(token))
     }
 
     @Test
@@ -82,11 +81,11 @@ class JwtUtilsTest {
                 claims = emptyMap(),
                 expiresAt = Date(System.currentTimeMillis() - 1_000), // expired 1s ago
             )
-        assertTrue(token.isExpired())
+        assertTrue(JwtUtils.isExpired(token))
     }
 
     @Test
     fun `isExpired returns true for a garbage string`() {
-        assertTrue("not.a.jwt".isExpired())
+        assertTrue(JwtUtils.isExpired("not.a.jwt"))
     }
 }

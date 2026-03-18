@@ -26,10 +26,9 @@ class NotificationServiceTest {
     }
 
     @AfterTest
-    fun cleanDb() =
-        transaction {
-            Notifications.deleteAll()
-        }
+    fun cleanDb() {
+        transaction { Notifications.deleteAll() }
+    }
 
     private fun createNotification(
         type: String = "FRIEND_REQUEST",

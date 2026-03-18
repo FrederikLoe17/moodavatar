@@ -20,6 +20,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.application.Application
 import io.ktor.server.routing.routing
+import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -39,13 +40,7 @@ class AuthRoutesTest {
     // exceptions are caught inside the route handlers, so tests still pass.
     private val emailService = EmailService(TestDatabase.config)
     private val userServiceClient by lazy {
-        val httpClient =
-            io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO) {
-                install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
-                    io.ktor.serialization.kotlinx.json
-                        .json(Json { ignoreUnknownKeys = true })
-                }
-            }
+        val httpClient = io.ktor.client.HttpClient(io.ktor.client.engine.cio.CIO)
         UserServiceClient(httpClient, "http://localhost:9999")
     }
 
@@ -55,21 +50,30 @@ class AuthRoutesTest {
         routing { authRoutes(authService, emailService, userServiceClient) }
     }
 
+    /** Wraps testApplication with the test environment config so that
+     *  configureSecurity() can resolve jwt.secret / jwt.issuer / jwt.audience. */
+    private fun routeTest(block: suspend ApplicationTestBuilder.() -> Unit) =
+        testApplication {
+            environment { config = TestDatabase.config }
+            application { installTestApp() }
+            block()
+        }
+
     @BeforeTest
-    fun cleanDb() =
+    fun cleanDb() {
         transaction {
             EmailVerifications.deleteAll()
             PasswordResets.deleteAll()
             RefreshTokens.deleteAll()
             Users.deleteAll()
         }
+    }
 
     // ── POST /auth/register ───────────────────────────────────────────────────
 
     @Test
     fun `POST register returns 201 and user body for valid request`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             val response =
                 client.post("/auth/register") {
                     contentType(ContentType.Application.Json)
@@ -82,8 +86,7 @@ class AuthRoutesTest {
 
     @Test
     fun `POST register returns 409 when email is already taken`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody("""{"email":"dup@test.com","username":"user1","password":"Password1"}""")
@@ -100,8 +103,7 @@ class AuthRoutesTest {
 
     @Test
     fun `POST login returns 200 and tokens for valid credentials`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody("""{"email":"login@test.com","username":"loginuser","password":"Password1"}""")
@@ -119,8 +121,7 @@ class AuthRoutesTest {
 
     @Test
     fun `POST login returns 401 for wrong password`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody("""{"email":"wrong@test.com","username":"wronguser","password":"Password1"}""")
@@ -135,8 +136,7 @@ class AuthRoutesTest {
 
     @Test
     fun `POST login returns 401 for unknown email`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             val response =
                 client.post("/auth/login") {
                     contentType(ContentType.Application.Json)
@@ -149,8 +149,7 @@ class AuthRoutesTest {
 
     @Test
     fun `POST refresh returns 200 and new access token`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody("""{"email":"ref@test.com","username":"refuser","password":"Password1"}""")
@@ -178,8 +177,7 @@ class AuthRoutesTest {
 
     @Test
     fun `POST refresh returns 401 for invalid token`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             val response =
                 client.post("/auth/refresh") {
                     contentType(ContentType.Application.Json)
@@ -192,16 +190,14 @@ class AuthRoutesTest {
 
     @Test
     fun `GET me returns 401 without Authorization header`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             val response = client.get("/auth/me")
             assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
 
     @Test
     fun `GET me returns 200 with valid JWT`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             client.post("/auth/register") {
                 contentType(ContentType.Application.Json)
                 setBody("""{"email":"me@test.com","username":"meuser","password":"Password1"}""")
@@ -227,8 +223,7 @@ class AuthRoutesTest {
 
     @Test
     fun `GET health returns 200`() =
-        testApplication {
-            application { installTestApp() }
+        routeTest {
             val response = client.get("/auth/health")
             assertEquals(HttpStatusCode.OK, response.status)
         }
