@@ -1,9 +1,13 @@
 import axios from 'axios'
 
-export const http = axios.create({ baseURL: '/api' })
+// In dev: Vite proxies /api/* → backend (prefix stripped)
+// In prod: VITE_API_BASE_URL points directly to the backend (e.g. https://your-app.koyeb.app)
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
+
+export const http = axios.create({ baseURL })
 
 // Separate instance for the refresh call itself — no interceptor, avoids infinite loop
-const plain = axios.create({ baseURL: '/api' })
+const plain = axios.create({ baseURL })
 
 // Single in-flight refresh promise — prevents multiple simultaneous refresh calls
 let refreshing: Promise<string> | null = null

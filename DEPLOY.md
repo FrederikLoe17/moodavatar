@@ -1,118 +1,142 @@
-# Deployment Guide – Hetzner VPS
+# MoodAvatar — Free Deployment Guide
 
-## 1. Hetzner Server einrichten
+Stack: **Koyeb** (backend) · **Vercel** (frontend) · **Neon** (PostgreSQL) · **MongoDB Atlas** (MongoDB) · **Brevo** (Email)
 
-### Server erstellen
-1. [hetzner.com/cloud](https://www.hetzner.com/cloud) → Projekt erstellen
-2. Server hinzufügen:
-   - **Typ**: CX22 (2 vCPU, 4 GB RAM, ~3,79 €/Monat)
-   - **Image**: Ubuntu 24.04
-   - **SSH-Key**: eigenen Public Key hinzufügen
-3. Server-IP notieren
-
-### Domain einrichten
-- Domain-DNS: A-Record auf die Server-IP setzen
-- Alternativ kostenlose Subdomain: [duckdns.org](https://duckdns.org)
-
-### Server-Setup (einmalig, per SSH)
-
-```bash
-ssh root@<SERVER_IP>
-
-# Docker installieren
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker
-
-# Repo klonen
-git clone https://github.com/FrederikLoe17/moodavatar.git /opt/moodavatar
-cd /opt/moodavatar
-
-# Produktion .env anlegen (Werte anpassen!)
-cat > .env << 'EOF'
-DOMAIN=deine-domain.de
-
-POSTGRES_USER=moodavatar
-POSTGRES_PASSWORD=<sicheres-passwort>
-
-JWT_SECRET=<langer-zufaelliger-string-min-32-zeichen>
-JWT_ISSUER=moodavatar
-JWT_AUDIENCE=moodavatar-users
-JWT_ACCESS_EXPIRY_MS=900000
-JWT_REFRESH_EXPIRY_MS=2592000000
-
-# SMTP für E-Mails (z.B. Brevo kostenlos: 300 E-Mails/Tag)
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=deine@email.de
-SMTP_PASSWORD=<brevo-smtp-passwort>
-EOF
-
-# Packages von ghcr.io ziehen und starten
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
-```
-
-Caddy holt sich automatisch ein TLS-Zertifikat (Let's Encrypt). Nach ~30 Sekunden ist die App unter `https://deine-domain.de` erreichbar.
+All services are free. No credit card required.
 
 ---
 
-## 2. GitHub Secrets für CD-Pipeline
+## Step 1 — PostgreSQL on Neon
 
-Unter **GitHub → Repository → Settings → Secrets → Actions** folgende Secrets anlegen:
-
-| Secret | Wert |
-|--------|------|
-| `SERVER_HOST` | IP-Adresse des Hetzner-Servers |
-| `SERVER_USER` | `root` |
-| `SERVER_SSH_KEY` | Inhalt des privaten SSH-Keys (`~/.ssh/id_rsa`) |
-
-Nach dem ersten manuellen Setup deployed die CD-Pipeline bei jedem Push auf `main` automatisch.
-
----
-
-## 3. E-Mail (SMTP) einrichten
-
-Für echte E-Mails (Registrierung, Passwort-Reset) empfehle ich **Brevo** (kostenlos, 300 E-Mails/Tag):
-
-1. [brevo.com](https://brevo.com) → Account erstellen
-2. **SMTP & API → SMTP** → SMTP-Zugangsdaten kopieren
-3. In `.env` auf dem Server eintragen und Services neu starten:
-   ```bash
-   cd /opt/moodavatar
-   docker compose -f docker-compose.prod.yml up -d backend
+1. Create account at **neon.tech** (GitHub login works)
+2. Create a new project → name it `moodavatar`
+3. Copy the connection string — it looks like:
    ```
+   postgresql://user:password@ep-xxx.eu-central-1.aws.neon.tech/neondb?sslmode=require
+   ```
+4. Note down the individual parts you'll need later:
+   - `DB_HOST` = `ep-xxx.eu-central-1.aws.neon.tech`
+   - `DB_PORT` = `5432`
+   - `DB_NAME` = `neondb`
+   - `DB_USER` = the user from the connection string
+   - `DB_PASSWORD` = the password from the connection string
+
+> Flyway runs automatically on backend startup and creates all tables.
 
 ---
 
-## 4. Nützliche Befehle auf dem Server
+## Step 2 — MongoDB on Atlas
 
-```bash
-# Logs des Backends anzeigen
-docker compose -f docker-compose.prod.yml logs -f backend
-
-# Alle Services neu starten
-docker compose -f docker-compose.prod.yml restart
-
-# Status aller Container
-docker compose -f docker-compose.prod.yml ps
-
-# Manuell deployen (ohne CD-Pipeline)
-cd /opt/moodavatar && git pull && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
-```
+1. Create account at **mongodb.com/atlas** (GitHub login works)
+2. Create a free **M0** cluster → choose a region close to your Koyeb region
+3. Under **Database Access**: create a user with read/write permissions, note the password
+4. Under **Network Access**: add `0.0.0.0/0` (allow all IPs — needed for Koyeb)
+5. Click **Connect** → **Drivers** → copy the connection string:
+   ```
+   mongodb+srv://youruser:yourpassword@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+   ```
+6. Add the database name: replace `/?` with `/moodavatar?`
 
 ---
 
-## 5. Ressourcen-Check
+## Step 3 — Email on Brevo
+
+1. Create account at **brevo.com** (no credit card)
+2. Go to **SMTP & API** → **SMTP**
+3. Note down:
+   - `SMTP_HOST` = `smtp-relay.brevo.com`
+   - `SMTP_PORT` = `587`
+   - `SMTP_USER` = your Brevo login email
+   - `SMTP_PASSWORD` = the SMTP key shown in the dashboard
+
+---
+
+## Step 4 — Backend on Koyeb
+
+1. Create account at **koyeb.com** (GitHub login works)
+2. Click **Create App** → **GitHub**
+3. Connect your GitHub account and select the `moodavatar` repository
+4. Configure the service:
+   - **Branch**: `main`
+   - **Build directory**: `moodavatar-backend`
+   - **Dockerfile path**: `Dockerfile`
+   - **Port**: `8080`
+   - **Region**: pick one close to your Atlas cluster
+5. Add all environment variables (click **Add variable** for each):
+
+| Variable | Value |
+|---|---|
+| `DB_HOST` | from Neon |
+| `DB_PORT` | `5432` |
+| `DB_NAME` | from Neon |
+| `DB_USER` | from Neon |
+| `DB_PASSWORD` | from Neon |
+| `MONGO_URI` | full Atlas connection string with `/moodavatar?...` |
+| `MONGO_DB` | `moodavatar` |
+| `JWT_SECRET` | generate a long random string (e.g. `openssl rand -hex 32`) |
+| `JWT_ISSUER` | `moodavatar` |
+| `JWT_AUDIENCE` | `moodavatar-users` |
+| `JWT_ACCESS_EXPIRY_MS` | `900000` |
+| `JWT_REFRESH_EXPIRY_MS` | `2592000000` |
+| `SMTP_HOST` | from Brevo |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | from Brevo |
+| `SMTP_PASSWORD` | from Brevo |
+| `APP_BASE_URL` | `https://your-frontend.vercel.app` (fill in after Step 5) |
+| `ALLOWED_ORIGIN` | `https://your-frontend.vercel.app` (fill in after Step 5) |
+
+6. Click **Deploy** — Koyeb builds the Docker image and starts the backend
+7. Note down the public URL: `https://your-app-xxx.koyeb.app`
+
+---
+
+## Step 5 — Frontend on Vercel
+
+1. Create account at **vercel.com** (GitHub login works)
+2. Click **Add New Project** → import the `moodavatar` repository
+3. Configure:
+   - **Root Directory**: `moodavatar-frontend`
+   - **Build Command**: `npm run build` (auto-detected)
+   - **Output Directory**: `dist` (auto-detected)
+4. Add environment variable:
+
+| Variable | Value |
+|---|---|
+| `VITE_API_BASE_URL` | `https://your-app-xxx.koyeb.app` (from Step 4) |
+
+5. Click **Deploy**
+6. Note down your Vercel URL: `https://your-frontend.vercel.app`
+
+---
+
+## Step 6 — Connect backend ↔ frontend
+
+Go back to Koyeb → your service → **Environment variables** and update:
+- `APP_BASE_URL` → `https://your-frontend.vercel.app`
+- `ALLOWED_ORIGIN` → `https://your-frontend.vercel.app`
+
+Click **Redeploy** in Koyeb.
+
+---
+
+## Done!
+
+Open `https://your-frontend.vercel.app` — register, verify email (check inbox), done.
+
+From now on: every push to `main` automatically redeploys both frontend (Vercel) and backend (Koyeb).
+
+---
+
+## Local Development
+
+Nothing changes locally:
 
 ```bash
-# RAM-Auslastung
-free -h
+# Backend + DBs
+docker compose up -d
 
-# CPU + Prozesse
-top
-
-# Docker-Statistiken
-docker stats --no-stream
+# Frontend (Vite proxy handles /api and /ws)
+cd moodavatar-frontend && npm run dev
 ```
 
-CX22 (4 GB RAM) reicht für die Beta. Bei mehr Last → Upgrade auf CX32 (8 GB, ~7,57 €/Monat) per Hetzner-Resize (kein Datenverlust).
+`VITE_API_BASE_URL` is not set locally → Vite proxy forwards to `localhost:8080` automatically.
