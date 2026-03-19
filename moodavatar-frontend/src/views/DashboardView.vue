@@ -217,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '../components/AppLayout.vue'
 import AvatarRoom from '../components/AvatarRoom.vue'
@@ -302,7 +302,7 @@ function needColor(v: number): string {
 function onAvatarUpdated(updated: Avatar) {
   avatar.value = updated
   history.value = [
-    { emotion: updated.emotion, intensity: updated.intensity, note: updated.note, timestamp: updated.updatedAt, config: updated.config },
+    { emotion: updated.emotion, intensity: updated.intensity, note: updated.note, setAt: updated.updatedAt, config: updated.config },
     ...history.value,
   ].slice(0, 50)
   avatarApi.getNeeds(auth.accessToken).then(r => { needs.value = r.data }).catch(() => {})
