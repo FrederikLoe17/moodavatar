@@ -4,43 +4,16 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'AuthserviceClaude/**'
-      - 'user-service/**'
-      - 'avatar-service/**'
-      - 'api-gateway/**'
-      - 'realtime-service/**'
-      - 'notification-service/**'
+      - 'moodavatar-backend/**'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'AuthserviceClaude/**'
-      - 'user-service/**'
-      - 'avatar-service/**'
-      - 'api-gateway/**'
-      - 'realtime-service/**'
-      - 'notification-service/**'
+      - 'moodavatar-backend/**'
 
 jobs:
   lint-and-test:
-    name: ktlint + test (${{ matrix.service.name }})
+    name: ktlint + test
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        service:
-          - name: auth-service
-            dir: AuthserviceClaude
-          - name: user-service
-            dir: user-service
-          - name: avatar-service
-            dir: avatar-service
-          - name: api-gateway
-            dir: api-gateway
-          - name: realtime-service
-            dir: realtime-service
-          - name: notification-service
-            dir: notification-service
 
     steps:
       - uses: actions/checkout@v4
@@ -57,23 +30,23 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ matrix.service.name }}-${{ hashFiles(format('{0}/gradle/wrapper/gradle-wrapper.properties', matrix.service.dir), format('{0}/build.gradle.kts', matrix.service.dir)) }}
-          restore-keys: gradle-${{ matrix.service.name }}-
+          key: gradle-backend-${{ hashFiles('moodavatar-backend/gradle/wrapper/gradle-wrapper.properties', 'moodavatar-backend/build.gradle.kts') }}
+          restore-keys: gradle-backend-
 
       - name: Make gradlew executable
-        run: chmod +x ${{ matrix.service.dir }}/gradlew
+        run: chmod +x moodavatar-backend/gradlew
 
       - name: ktlint check
-        working-directory: ${{ matrix.service.dir }}
+        working-directory: moodavatar-backend
         run: ./gradlew ktlintCheck
 
       - name: Run tests
-        working-directory: ${{ matrix.service.dir }}
+        working-directory: moodavatar-backend
         run: ./gradlew test
 
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: test-report-${{ matrix.service.name }}
-          path: ${{ matrix.service.dir }}/build/reports/tests/
+          name: test-report-backend
+          path: moodavatar-backend/build/reports/tests/
