@@ -108,10 +108,7 @@ export const useRealtimeStore = defineStore('realtime', () => {
     if (ws && ws.readyState === WebSocket.OPEN) return
     if (!auth.accessToken) return
 
-    const apiBase = import.meta.env.VITE_API_BASE_URL
-    const wsBase = apiBase
-      ? apiBase.replace(/^https/, 'wss').replace(/^http/, 'ws')
-      : ''
+    const wsBase = import.meta.env.VITE_WS_URL ?? ''
     const url = `${wsBase}/ws?token=${encodeURIComponent(auth.accessToken)}`
     ws = new WebSocket(url)
 
