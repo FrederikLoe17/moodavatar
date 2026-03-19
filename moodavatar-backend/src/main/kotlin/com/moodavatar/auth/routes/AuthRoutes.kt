@@ -26,26 +26,29 @@ fun Route.authRoutes(
 
         post("/register") {
             val req = call.receive<RegisterRequest>()
-            val user = try {
-                authService.register(req)
-            } catch (e: Exception) {
-                val msg = e.message ?: "UNKNOWN"
-                val status = if (msg.contains("TAKEN")) HttpStatusCode.Conflict else HttpStatusCode.BadRequest
-                call.respond(status, ErrorResponse(msg, "Registration failed"))
-                return@post
-            }
+            val user =
+                try {
+                    authService.register(req)
+                } catch (e: Exception) {
+                    val msg = e.message ?: "UNKNOWN"
+                    val status = if (msg.contains("TAKEN")) HttpStatusCode.Conflict else HttpStatusCode.BadRequest
+                    call.respond(status, ErrorResponse(msg, "Registration failed"))
+                    return@post
+                }
 
             // Direct call instead of HTTP to user-service
             try {
                 profileService.createProfile(
-                    CreateProfileRequest(id = user.id, username = user.username, displayName = user.username)
+                    CreateProfileRequest(id = user.id, username = user.username, displayName = user.username),
                 )
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
 
             try {
                 val verificationToken = authService.createVerificationToken(UUID.fromString(user.id))
                 emailService.sendEmailVerification(user.email, verificationToken)
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
 
             call.respond(HttpStatusCode.Created, user)
         }
@@ -111,11 +114,13 @@ fun Route.authRoutes(
         authenticate("auth-jwt") {
             get("/me") {
                 val principal = call.principal<JWTPrincipal>()
-                val userId = principal?.payload?.getClaim("userId")?.asString()
-                    ?: return@get call.respond(HttpStatusCode.Unauthorized)
+                val userId =
+                    principal?.payload?.getClaim("userId")?.asString()
+                        ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
-                val user = authService.getUserById(UUID.fromString(userId))
-                    ?: return@get call.respond(HttpStatusCode.NotFound)
+                val user =
+                    authService.getUserById(UUID.fromString(userId))
+                        ?: return@get call.respond(HttpStatusCode.NotFound)
 
                 call.respond(HttpStatusCode.OK, user)
             }

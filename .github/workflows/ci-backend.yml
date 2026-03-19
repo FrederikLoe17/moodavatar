@@ -24,25 +24,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-backend-${{ hashFiles('moodavatar-backend/gradle/wrapper/gradle-wrapper.properties', 'moodavatar-backend/build.gradle.kts') }}
-          restore-keys: gradle-backend-
-
-      - name: Make gradlew executable
-        run: chmod +x moodavatar-backend/gradlew
+          gradle-version: '8.5'
 
       - name: ktlint check
         working-directory: moodavatar-backend
-        run: ./gradlew ktlintCheck
+        run: gradle ktlintCheck
 
       - name: Run tests
         working-directory: moodavatar-backend
-        run: ./gradlew test
+        run: gradle test
 
       - name: Upload test reports
         if: failure()

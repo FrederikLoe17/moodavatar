@@ -16,19 +16,24 @@ object RoomManager {
     // roomOwnerId -> (visitorUserId -> RoomVisitor)
     private val rooms = ConcurrentHashMap<String, ConcurrentHashMap<String, RoomVisitor>>()
 
-    fun joinRoom(roomOwnerId: String, visitor: RoomVisitor) {
+    fun joinRoom(
+        roomOwnerId: String,
+        visitor: RoomVisitor,
+    ) {
         rooms.computeIfAbsent(roomOwnerId) { ConcurrentHashMap() }[visitor.userId] = visitor
     }
 
-    fun leaveRoom(roomOwnerId: String, visitorUserId: String): RoomVisitor? {
-        val room    = rooms[roomOwnerId] ?: return null
+    fun leaveRoom(
+        roomOwnerId: String,
+        visitorUserId: String,
+    ): RoomVisitor? {
+        val room = rooms[roomOwnerId] ?: return null
         val visitor = room.remove(visitorUserId)
         if (room.isEmpty()) rooms.remove(roomOwnerId)
         return visitor
     }
 
-    fun getVisitors(roomOwnerId: String): List<RoomVisitor> =
-        rooms[roomOwnerId]?.values?.toList() ?: emptyList()
+    fun getVisitors(roomOwnerId: String): List<RoomVisitor> = rooms[roomOwnerId]?.values?.toList() ?: emptyList()
 
     fun leaveAllRooms(userId: String): List<Pair<String, RoomVisitor>> {
         val results = mutableListOf<Pair<String, RoomVisitor>>()

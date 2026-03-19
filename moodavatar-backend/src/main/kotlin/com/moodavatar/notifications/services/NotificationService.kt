@@ -17,17 +17,20 @@ class NotificationService {
         metadata: String? = null,
     ) = transaction {
         Notifications.insert {
-            it[Notifications.userId]       = UUID.fromString(userId)
-            it[Notifications.type]         = type
-            it[Notifications.fromUserId]   = fromUserId
+            it[Notifications.userId] = UUID.fromString(userId)
+            it[Notifications.type] = type
+            it[Notifications.fromUserId] = fromUserId
             it[Notifications.fromUsername] = fromUsername
-            it[Notifications.read]         = false
-            it[Notifications.metadata]     = metadata
-            it[Notifications.createdAt]    = LocalDateTime.now()
+            it[Notifications.read] = false
+            it[Notifications.metadata] = metadata
+            it[Notifications.createdAt] = LocalDateTime.now()
         }
     }
 
-    fun listForUser(userId: String, limit: Int = 50): List<NotificationDto> =
+    fun listForUser(
+        userId: String,
+        limit: Int = 50,
+    ): List<NotificationDto> =
         transaction {
             Notifications
                 .select { Notifications.userId eq UUID.fromString(userId) }
@@ -46,7 +49,10 @@ class NotificationService {
                 .count().toInt()
         }
 
-    fun markRead(id: String, userId: String): Boolean =
+    fun markRead(
+        id: String,
+        userId: String,
+    ): Boolean =
         transaction {
             Notifications.update({
                 (Notifications.id eq UUID.fromString(id)) and
@@ -66,13 +72,14 @@ class NotificationService {
             }
         }
 
-    private fun ResultRow.toDto() = NotificationDto(
-        id           = this[Notifications.id].toString(),
-        type         = this[Notifications.type],
-        fromUserId   = this[Notifications.fromUserId],
-        fromUsername = this[Notifications.fromUsername],
-        read         = this[Notifications.read],
-        metadata     = this[Notifications.metadata],
-        createdAt    = this[Notifications.createdAt].toString(),
-    )
+    private fun ResultRow.toDto() =
+        NotificationDto(
+            id = this[Notifications.id].toString(),
+            type = this[Notifications.type],
+            fromUserId = this[Notifications.fromUserId],
+            fromUsername = this[Notifications.fromUsername],
+            read = this[Notifications.read],
+            metadata = this[Notifications.metadata],
+            createdAt = this[Notifications.createdAt].toString(),
+        )
 }

@@ -29,40 +29,67 @@ private suspend fun ApplicationCall.unauthorized() =
 private suspend fun ApplicationCall.badRequest(msg: String) =
     respond<ErrorResponse>(HttpStatusCode.BadRequest, ErrorResponse("INVALID_ID", msg))
 
-fun Route.friendRoutes(friendService: FriendService, notificationService: NotificationService) {
+fun Route.friendRoutes(
+    friendService: FriendService,
+    notificationService: NotificationService,
+) {
     authenticate("auth-jwt") {
         route("/friends") {
             get {
-                val userId = call.extractUserId() ?: run { call.unauthorized(); return@get }
+                val userId =
+                    call.extractUserId() ?: run {
+                        call.unauthorized()
+                        return@get
+                    }
                 call.respond<List<ProfileResponse>>(HttpStatusCode.OK, friendService.getFriends(userId))
             }
 
             get("/requests") {
-                val userId = call.extractUserId() ?: run { call.unauthorized(); return@get }
+                val userId =
+                    call.extractUserId() ?: run {
+                        call.unauthorized()
+                        return@get
+                    }
                 call.respond<List<FriendRequestResponse>>(HttpStatusCode.OK, friendService.getPendingRequests(userId))
             }
 
             post("/requests/{receiverId}") {
-                val userId = call.extractUserId() ?: run { call.unauthorized(); return@post }
-                val receiverId = call.parameters["receiverId"]
-                    ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-                    ?: run { call.badRequest("Invalid receiver ID"); return@post }
+                val userId =
+                    call.extractUserId() ?: run {
+                        call.unauthorized()
+                        return@post
+                    }
+                val receiverId =
+                    call.parameters["receiverId"]
+                        ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                        ?: run {
+                            call.badRequest("Invalid receiver ID")
+                            return@post
+                        }
 
                 try {
                     val result = friendService.sendRequest(userId, receiverId, notificationService)
                     call.respond<FriendRequestResponse>(HttpStatusCode.Created, result)
                 } catch (e: Exception) {
-                    val msg    = e.message ?: "ERROR"
+                    val msg = e.message ?: "ERROR"
                     val status = if (msg == "USER_NOT_FOUND") HttpStatusCode.NotFound else HttpStatusCode.BadRequest
                     call.respond<ErrorResponse>(status, ErrorResponse(msg, "Friend request failed"))
                 }
             }
 
             patch("/requests/{requestId}") {
-                val userId = call.extractUserId() ?: run { call.unauthorized(); return@patch }
-                val requestId = call.parameters["requestId"]
-                    ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-                    ?: run { call.badRequest("Invalid request ID"); return@patch }
+                val userId =
+                    call.extractUserId() ?: run {
+                        call.unauthorized()
+                        return@patch
+                    }
+                val requestId =
+                    call.parameters["requestId"]
+                        ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                        ?: run {
+                            call.badRequest("Invalid request ID")
+                            return@patch
+                        }
 
                 val body = call.receive<FriendRequestAction>()
                 try {
@@ -74,10 +101,18 @@ fun Route.friendRoutes(friendService: FriendService, notificationService: Notifi
             }
 
             delete("/{friendId}") {
-                val userId = call.extractUserId() ?: run { call.unauthorized(); return@delete }
-                val friendId = call.parameters["friendId"]
-                    ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-                    ?: run { call.badRequest("Invalid friend ID"); return@delete }
+                val userId =
+                    call.extractUserId() ?: run {
+                        call.unauthorized()
+                        return@delete
+                    }
+                val friendId =
+                    call.parameters["friendId"]
+                        ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+                        ?: run {
+                            call.badRequest("Invalid friend ID")
+                            return@delete
+                        }
 
                 val removed = friendService.removeFriend(userId, friendId)
                 if (removed) {

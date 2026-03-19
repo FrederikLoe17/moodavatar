@@ -34,17 +34,17 @@ fun Application.configureRouting(mongoDb: MongoDatabase) {
     val jwtSecret = cfg.property("jwt.secret").getString()
 
     // ── Service instances ────────────────────────────────────────────────────
-    val authService         = AuthService(cfg)
-    val authAdminService    = AdminService()
-    val emailService        = EmailService(cfg)
-    val profileService      = ProfileService()
-    val friendService       = FriendService()
-    val userAdminService    = UserAdminService()
-    val avatarService       = AvatarService(mongoDb)
-    val needsService        = NeedsService(mongoDb)
+    val authService = AuthService(cfg)
+    val authAdminService = AdminService()
+    val emailService = EmailService(cfg)
+    val profileService = ProfileService()
+    val friendService = FriendService()
+    val userAdminService = UserAdminService()
+    val avatarService = AvatarService(mongoDb)
+    val needsService = NeedsService(mongoDb)
     val notificationService = NotificationService()
-    val connectionManager   = ConnectionManager
-    val roomManager         = RoomManager
+    val connectionManager = ConnectionManager
+    val roomManager = RoomManager
 
     routing {
         // ── Health ──────────────────────────────────────────────────────────

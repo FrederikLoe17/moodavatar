@@ -13,13 +13,15 @@ class UserAdminService {
     fun getStats(): UserAdminStatsResponse =
         transaction {
             UserAdminStatsResponse(
-                totalProfiles   = Profiles.selectAll().count(),
-                totalFriendships = FriendRequests
-                    .select { FriendRequests.status eq FriendshipStatus.ACCEPTED }
-                    .count(),
-                pendingRequests = FriendRequests
-                    .select { FriendRequests.status eq FriendshipStatus.PENDING }
-                    .count(),
+                totalProfiles = Profiles.selectAll().count(),
+                totalFriendships =
+                    FriendRequests
+                        .select { FriendRequests.status eq FriendshipStatus.ACCEPTED }
+                        .count(),
+                pendingRequests =
+                    FriendRequests
+                        .select { FriendRequests.status eq FriendshipStatus.PENDING }
+                        .count(),
             )
         }
 }

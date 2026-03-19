@@ -13,7 +13,7 @@ data class ConnectedUser(
 )
 
 object ConnectionManager {
-    private val log         = LoggerFactory.getLogger(ConnectionManager::class.java)
+    private val log = LoggerFactory.getLogger(ConnectionManager::class.java)
     private val connections = ConcurrentHashMap<String, ConnectedUser>()
 
     fun connect(user: ConnectedUser) {
@@ -30,7 +30,10 @@ object ConnectionManager {
 
     fun getOnlineUserIds(): Set<String> = connections.keys.toSet()
 
-    suspend fun sendTo(userId: String, payload: String): Boolean {
+    suspend fun sendTo(
+        userId: String,
+        payload: String,
+    ): Boolean {
         val conn = connections[userId] ?: return false
         return try {
             conn.session.send(Frame.Text(payload))
@@ -42,7 +45,10 @@ object ConnectionManager {
         }
     }
 
-    suspend fun broadcastToUsers(userIds: List<String>, payload: String) {
+    suspend fun broadcastToUsers(
+        userIds: List<String>,
+        payload: String,
+    ) {
         userIds.forEach { sendTo(it, payload) }
     }
 

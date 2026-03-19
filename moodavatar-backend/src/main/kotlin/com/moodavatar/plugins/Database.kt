@@ -26,20 +26,21 @@ fun Application.configureDatabase(): MongoDatabase {
         .load()
         .migrate()
 
-    val hikari = HikariDataSource(
-        HikariConfig().apply {
-            this.jdbcUrl = jdbcUrl
-            this.username = user
-            this.password = password
-            driverClassName = "org.postgresql.Driver"
-            maximumPoolSize = 15
-        }
-    )
+    val hikari =
+        HikariDataSource(
+            HikariConfig().apply {
+                this.jdbcUrl = jdbcUrl
+                this.username = user
+                this.password = password
+                driverClassName = "org.postgresql.Driver"
+                maximumPoolSize = 15
+            },
+        )
     Database.connect(hikari)
 
     // ── MongoDB ───────────────────────────────────────────────────────────────
     val mongoUri = cfg.property("mongodb.uri").getString()
-    val mongoDb  = cfg.property("mongodb.db").getString()
+    val mongoDb = cfg.property("mongodb.db").getString()
     val mongoClient: MongoClient = MongoClients.create(mongoUri)
     return mongoClient.getDatabase(mongoDb)
 }

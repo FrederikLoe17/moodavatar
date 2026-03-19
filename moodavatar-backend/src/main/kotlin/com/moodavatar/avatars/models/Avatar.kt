@@ -1,7 +1,14 @@
 package com.moodavatar.avatars.models
 
 enum class Emotion {
-    HAPPY, SAD, ANGRY, NEUTRAL, EXCITED, TIRED, ANXIOUS, CONTENT,
+    HAPPY,
+    SAD,
+    ANGRY,
+    NEUTRAL,
+    EXCITED,
+    TIRED,
+    ANXIOUS,
+    CONTENT,
 }
 
 data class AvatarConfig(
@@ -20,12 +27,12 @@ data class AvatarConfig(
 
 fun emotionToMoodConfig(emotion: String): Triple<String, String, String> =
     when (emotion.uppercase()) {
-        "HAPPY"   -> Triple("#10b981", "smile",        "golden")
-        "SAD"     -> Triple("#3b82f6", "frown",        "blue")
-        "ANGRY"   -> Triple("#ef4444", "angry",        "red")
-        "EXCITED" -> Triple("#f59e0b", "wide-eyes",    "yellow")
-        "TIRED"   -> Triple("#8b5cf6", "half-eyes",    "purple")
-        "ANXIOUS" -> Triple("#f97316", "worried",      "orange")
+        "HAPPY" -> Triple("#10b981", "smile", "golden")
+        "SAD" -> Triple("#3b82f6", "frown", "blue")
+        "ANGRY" -> Triple("#ef4444", "angry", "red")
+        "EXCITED" -> Triple("#f59e0b", "wide-eyes", "yellow")
+        "TIRED" -> Triple("#8b5cf6", "half-eyes", "purple")
+        "ANXIOUS" -> Triple("#f97316", "worried", "orange")
         "CONTENT" -> Triple("#06b6d4", "gentle-smile", "teal")
-        else      -> Triple("#64748b", "neutral",      "gray")
+        else -> Triple("#64748b", "neutral", "gray")
     }

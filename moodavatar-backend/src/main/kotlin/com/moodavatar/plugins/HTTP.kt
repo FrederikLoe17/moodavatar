@@ -16,7 +16,7 @@ fun Application.configureHTTP() {
                 allowedOrigin
                     .removePrefix("https://")
                     .removePrefix("http://"),
-                schemes = listOf("http", "https")
+                schemes = listOf("http", "https"),
             )
         }
         allowHeader(HttpHeaders.Authorization)

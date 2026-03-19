@@ -13,12 +13,13 @@ fun Route.avatarAdminRoutes(avatarService: AvatarService) {
     route("/avatars/admin") {
         authenticate("auth-jwt") {
             get("/stats") {
-                val role = call.principal<JWTPrincipal>()
-                    ?.payload?.getClaim("role")?.asString()
+                val role =
+                    call.principal<JWTPrincipal>()
+                        ?.payload?.getClaim("role")?.asString()
                 if (role != "ADMIN") {
                     return@get call.respond(
                         HttpStatusCode.Forbidden,
-                        ErrorResponse("FORBIDDEN", "Admin access required")
+                        ErrorResponse("FORBIDDEN", "Admin access required"),
                     )
                 }
                 call.respond(HttpStatusCode.OK, avatarService.getAdminStats())

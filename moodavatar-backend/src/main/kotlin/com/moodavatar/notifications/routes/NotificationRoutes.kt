@@ -10,8 +10,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-private fun ApplicationCall.userId(): String? =
-    principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+private fun ApplicationCall.userId(): String? = principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
 
 fun Route.notificationRoutes(service: NotificationService) {
     authenticate("auth-jwt") {
@@ -34,8 +33,8 @@ fun Route.notificationRoutes(service: NotificationService) {
 
             post("/{id}/read") {
                 val userId = call.userId() ?: return@post call.respond(HttpStatusCode.Unauthorized)
-                val id     = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
-                val ok     = service.markRead(id, userId)
+                val id = call.parameters["id"] ?: return@post call.respond(HttpStatusCode.BadRequest)
+                val ok = service.markRead(id, userId)
                 if (ok) {
                     call.respond(MessageResponse("Marked as read"))
                 } else {

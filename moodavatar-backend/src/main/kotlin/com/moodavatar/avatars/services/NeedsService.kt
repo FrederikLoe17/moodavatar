@@ -26,7 +26,7 @@ class NeedsService(private val db: MongoDatabase) {
             col.updateOne(
                 Document("_id", userId),
                 Document("\$set", Document("lastMoodCheckin", now).append("lastActivity", now)),
-                UpdateOptions().upsert(true)
+                UpdateOptions().upsert(true),
             )
         }
 
@@ -36,27 +36,30 @@ class NeedsService(private val db: MongoDatabase) {
             col.updateOne(
                 Document("_id", userId),
                 Document("\$set", Document("lastSocialEvent", now).append("lastActivity", now)),
-                UpdateOptions().upsert(true)
+                UpdateOptions().upsert(true),
             )
         }
 
     private fun compute(doc: Document?): NeedsResponse {
         val now = Instant.now()
 
-        fun decay(isoTs: String?, decayPerHour: Double): Int {
+        fun decay(
+            isoTs: String?,
+            decayPerHour: Double,
+        ): Int {
             if (isoTs == null) return 30
             val hours = ChronoUnit.MINUTES.between(Instant.parse(isoTs), now).toDouble() / 60.0
             return max(0, min(100, (100.0 - hours * decayPerHour).toInt()))
         }
 
-        val lastMood     = doc?.getString("lastMoodCheckin")
-        val lastSocial   = doc?.getString("lastSocialEvent")
+        val lastMood = doc?.getString("lastMoodCheckin")
+        val lastSocial = doc?.getString("lastSocialEvent")
         val lastActivity = doc?.getString("lastActivity")
 
         return NeedsResponse(
-            mood     = decay(lastMood,     5.0),
-            energy   = decay(lastMood,     2.08),
-            social   = decay(lastSocial,   2.78),
+            mood = decay(lastMood, 5.0),
+            energy = decay(lastMood, 2.08),
+            social = decay(lastSocial, 2.78),
             activity = decay(lastActivity, 3.57),
         )
     }

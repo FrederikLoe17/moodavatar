@@ -19,7 +19,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 
-private val log  = LoggerFactory.getLogger("WebSocketRoutes")
+private val log = LoggerFactory.getLogger("WebSocketRoutes")
 private val json = Json { ignoreUnknownKeys = true }
 
 fun Route.webSocketRoutes(
@@ -31,10 +31,11 @@ fun Route.webSocketRoutes(
     roomManager: RoomManager,
 ) {
     val algorithm = Algorithm.HMAC256(jwtSecret)
-    val verifier  = JWT.require(algorithm)
-        .withIssuer("moodavatar")
-        .withAudience("moodavatar-users")
-        .build()
+    val verifier =
+        JWT.require(algorithm)
+            .withIssuer("moodavatar")
+            .withAudience("moodavatar-users")
+            .build()
 
     webSocket("/ws") {
         val token = call.request.queryParameters["token"]
@@ -44,15 +45,16 @@ fun Route.webSocketRoutes(
             return@webSocket
         }
 
-        val decodedJwt = try {
-            verifier.verify(token)
-        } catch (e: Exception) {
-            send(json.encodeToString(ErrorMessage.serializer(), ErrorMessage(message = "Invalid token")))
-            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid token"))
-            return@webSocket
-        }
+        val decodedJwt =
+            try {
+                verifier.verify(token)
+            } catch (e: Exception) {
+                send(json.encodeToString(ErrorMessage.serializer(), ErrorMessage(message = "Invalid token")))
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid token"))
+                return@webSocket
+            }
 
-        val userId   = decodedJwt.getClaim("userId").asString()
+        val userId = decodedJwt.getClaim("userId").asString()
         val username = decodedJwt.getClaim("username").asString() ?: userId
         if (userId == null) {
             send(connectionManager.encode(ErrorMessage(message = "userId claim missing")))
@@ -66,7 +68,7 @@ fun Route.webSocketRoutes(
         // Notify friends online
         launch {
             val friendIds = friendService.getFriendIds(userId)
-            val msg       = connectionManager.encode(FriendOnlineStatus(userId = userId, username = username, online = true))
+            val msg = connectionManager.encode(FriendOnlineStatus(userId = userId, username = username, online = true))
             connectionManager.broadcastToUsers(friendIds, msg)
         }
 
@@ -75,12 +77,13 @@ fun Route.webSocketRoutes(
                 if (frame !is Frame.Text) continue
                 val text = frame.readText()
 
-                val inbound = try {
-                    json.decodeFromString<InboundMessage>(text)
-                } catch (e: Exception) {
-                    log.warn("Unparseable message from $userId: $text")
-                    continue
-                }
+                val inbound =
+                    try {
+                        json.decodeFromString<InboundMessage>(text)
+                    } catch (e: Exception) {
+                        log.warn("Unparseable message from $userId: $text")
+                        continue
+                    }
 
                 when (inbound.type) {
                     "ping" -> {
@@ -88,33 +91,34 @@ fun Route.webSocketRoutes(
                     }
 
                     "mood_update" -> {
-                        val payload   = inbound.payload?.jsonObject ?: continue
-                        val emotion   = payload["emotion"]?.jsonPrimitive?.content ?: continue
+                        val payload = inbound.payload?.jsonObject ?: continue
+                        val emotion = payload["emotion"]?.jsonPrimitive?.content ?: continue
                         val intensity = payload["intensity"]?.jsonPrimitive?.content?.toIntOrNull() ?: 5
-                        val note      = payload["note"]?.jsonPrimitive?.content
+                        val note = payload["note"]?.jsonPrimitive?.content
 
                         val friendIds = friendService.getFriendIds(userId)
-                        val msg = connectionManager.encode(
-                            FriendMoodUpdate(
-                                userId    = userId,
-                                username  = username,
-                                emotion   = emotion,
-                                intensity = intensity,
-                                note      = note,
+                        val msg =
+                            connectionManager.encode(
+                                FriendMoodUpdate(
+                                    userId = userId,
+                                    username = username,
+                                    emotion = emotion,
+                                    intensity = intensity,
+                                    note = note,
+                                ),
                             )
-                        )
                         connectionManager.broadcastToUsers(friendIds, msg)
                         log.info("Mood broadcast from $username: $emotion ($intensity) → ${friendIds.size} friends")
                     }
 
                     "join_room" -> {
-                        val payload      = inbound.payload?.jsonObject ?: continue
-                        val roomOwnerId  = payload["roomOwnerId"]?.jsonPrimitive?.content ?: continue
-                        val emotion      = payload["emotion"]?.jsonPrimitive?.content
-                        val skinColor    = payload["skinColor"]?.jsonPrimitive?.content
+                        val payload = inbound.payload?.jsonObject ?: continue
+                        val roomOwnerId = payload["roomOwnerId"]?.jsonPrimitive?.content ?: continue
+                        val emotion = payload["emotion"]?.jsonPrimitive?.content
+                        val skinColor = payload["skinColor"]?.jsonPrimitive?.content
                         val clothesColor = payload["clothesColor"]?.jsonPrimitive?.content
-                        val hairStyle    = payload["hairStyle"]?.jsonPrimitive?.content
-                        val hairColor    = payload["hairColor"]?.jsonPrimitive?.content
+                        val hairStyle = payload["hairStyle"]?.jsonPrimitive?.content
+                        val hairColor = payload["hairColor"]?.jsonPrimitive?.content
 
                         if (roomOwnerId == userId) continue
 
@@ -122,23 +126,25 @@ fun Route.webSocketRoutes(
                         roomManager.joinRoom(roomOwnerId, visitor)
 
                         // Send current room state to joining visitor
-                        val stateVisitors = roomManager.getVisitors(roomOwnerId).map { v ->
-                            RoomVisitorInfo(v.userId, v.username, v.emotion, v.skinColor, v.clothesColor, v.hairStyle, v.hairColor)
-                        }
+                        val stateVisitors =
+                            roomManager.getVisitors(roomOwnerId).map { v ->
+                                RoomVisitorInfo(v.userId, v.username, v.emotion, v.skinColor, v.clothesColor, v.hairStyle, v.hairColor)
+                            }
                         send(connectionManager.encode(RoomStateMessage(visitors = stateVisitors)))
 
                         // Broadcast visitor_entered to owner + existing visitors
-                        val enteredMsg = connectionManager.encode(
-                            VisitorEntered(
-                                userId       = userId,
-                                username     = username,
-                                emotion      = emotion,
-                                skinColor    = skinColor,
-                                clothesColor = clothesColor,
-                                hairStyle    = hairStyle,
-                                hairColor    = hairColor,
+                        val enteredMsg =
+                            connectionManager.encode(
+                                VisitorEntered(
+                                    userId = userId,
+                                    username = username,
+                                    emotion = emotion,
+                                    skinColor = skinColor,
+                                    clothesColor = clothesColor,
+                                    hairStyle = hairStyle,
+                                    hairColor = hairColor,
+                                ),
                             )
-                        )
                         connectionManager.sendTo(roomOwnerId, enteredMsg)
                         roomManager.getVisitors(roomOwnerId)
                             .filter { it.userId != userId }
@@ -147,9 +153,9 @@ fun Route.webSocketRoutes(
                         // Notification + social needs — direct service calls
                         launch {
                             notificationService.create(
-                                userId       = roomOwnerId,
-                                type         = "ROOM_VISIT",
-                                fromUserId   = userId,
+                                userId = roomOwnerId,
+                                type = "ROOM_VISIT",
+                                fromUserId = userId,
                                 fromUsername = username,
                             )
                         }
@@ -162,7 +168,7 @@ fun Route.webSocketRoutes(
                     }
 
                     "leave_room" -> {
-                        val payload     = inbound.payload?.jsonObject ?: continue
+                        val payload = inbound.payload?.jsonObject ?: continue
                         val roomOwnerId = payload["roomOwnerId"]?.jsonPrimitive?.content ?: continue
 
                         roomManager.leaveRoom(roomOwnerId, userId) ?: continue
@@ -175,19 +181,20 @@ fun Route.webSocketRoutes(
                     }
 
                     "room_reaction" -> {
-                        val payload     = inbound.payload?.jsonObject ?: continue
+                        val payload = inbound.payload?.jsonObject ?: continue
                         val roomOwnerId = payload["roomOwnerId"]?.jsonPrimitive?.content ?: continue
-                        val reaction    = payload["reaction"]?.jsonPrimitive?.content ?: continue
+                        val reaction = payload["reaction"]?.jsonPrimitive?.content ?: continue
 
-                        val msg = connectionManager.encode(
-                            RoomReactionReceived(fromUserId = userId, fromUsername = username, reaction = reaction)
-                        )
+                        val msg =
+                            connectionManager.encode(
+                                RoomReactionReceived(fromUserId = userId, fromUsername = username, reaction = reaction),
+                            )
                         connectionManager.sendTo(roomOwnerId, msg)
                         roomManager.getVisitors(roomOwnerId).forEach { connectionManager.sendTo(it.userId, msg) }
                     }
 
                     "room_knock" -> {
-                        val payload     = inbound.payload?.jsonObject ?: continue
+                        val payload = inbound.payload?.jsonObject ?: continue
                         val roomOwnerId = payload["roomOwnerId"]?.jsonPrimitive?.content ?: continue
 
                         val msg = connectionManager.encode(RoomKnocked(fromUserId = userId, fromUsername = username))
