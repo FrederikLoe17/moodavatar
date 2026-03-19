@@ -10,17 +10,16 @@ export default async function handler(req, res) {
 
     const forwardHeaders = {}
     for (const [key, value] of Object.entries(req.headers)) {
-        if (!['host', 'connection', 'transfer-encoding'].includes(key.toLowerCase())) {
+        if (!['host', 'connection', 'transfer-encoding', 'content-length'].includes(key.toLowerCase())) {
             forwardHeaders[key] = value
         }
     }
 
     let body
-    if (req.method !== 'GET' && req.method !== 'HEAD') {
-        const chunks = []
-        for await (const chunk of req) chunks.push(chunk)
-        const buf = Buffer.concat(chunks)
-        if (buf.length > 0) body = buf
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body !== undefined) {
+        body = JSON.stringify(req.body)
+        forwardHeaders['content-type'] = 'application/json'
+        forwardHeaders['content-length'] = Buffer.byteLength(body).toString()
     }
 
     const response = await fetch(targetUrl, { method: req.method, headers: forwardHeaders, body })
