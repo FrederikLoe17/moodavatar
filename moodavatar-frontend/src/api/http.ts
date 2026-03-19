@@ -4,15 +4,10 @@ import axios from 'axios'
 // In prod: VITE_API_BASE_URL points directly to the backend (e.g. https://your-app.koyeb.app)
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-// ngrok free tier shows an interstitial page — this header bypasses it
-const extraHeaders = import.meta.env.VITE_API_BASE_URL
-  ? { 'ngrok-skip-browser-warning': '1' }
-  : {}
-
-export const http = axios.create({ baseURL, headers: extraHeaders })
+export const http = axios.create({ baseURL })
 
 // Separate instance for the refresh call itself — no interceptor, avoids infinite loop
-const plain = axios.create({ baseURL, headers: extraHeaders })
+const plain = axios.create({ baseURL })
 
 // Single in-flight refresh promise — prevents multiple simultaneous refresh calls
 let refreshing: Promise<string> | null = null

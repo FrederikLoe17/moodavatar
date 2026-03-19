@@ -68,7 +68,7 @@ services:
       SMTP_USER: ""
       SMTP_PASSWORD: ""
       APP_BASE_URL: ${APP_BASE_URL}
-      ALLOWED_ORIGIN: http://localhost:5173
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
     depends_on:
       postgres:
         condition: service_healthy
