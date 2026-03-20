@@ -254,26 +254,6 @@
             </div>
           </div>
 
-          <!-- RabbitMQ -->
-          <div style="background:#1e293b;border-radius:12px;border:1px solid #334155;overflow:hidden">
-            <div style="padding:16px 20px;border-bottom:1px solid #334155">
-              <span style="font-size:13px;font-weight:700;color:#94a3b8">Message Broker</span>
-            </div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px">
-              <div style="display:flex;align-items:center;gap:10px">
-                <div style="width:10px;height:10px;border-radius:50%"
-                  :style="{ background: systemHealth.rabbitmq.ok ? '#10b981' : '#ef4444' }"
-                />
-                <span style="font-size:13px;font-weight:600;color:#f1f5f9">RabbitMQ</span>
-                <span style="font-size:11px;color:#64748b">moodavatar.events · notification-service</span>
-              </div>
-              <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px"
-                :style="systemHealth.rabbitmq.ok
-                  ? 'background:#10b98122;color:#10b981;border:1px solid #10b98144'
-                  : 'background:#ef444422;color:#ef4444;border:1px solid #ef444444'"
-              >{{ systemHealth.rabbitmq.ok ? 'UP' : 'DOWN' }}</span>
-            </div>
-          </div>
         </template>
       </div>
 
@@ -376,12 +356,7 @@ const systemHealth    = ref<SystemHealth | null>(null)
 const systemLastCheck = ref('—')
 
 const SERVICE_LABELS: Record<string, string> = {
-  'api-gateway':          'API Gateway (8080)',
-  'auth-service':         'Auth Service (8081)',
-  'user-service':         'User Service (8082)',
-  'avatar-service':       'Avatar Service (8083)',
-  'realtime-service':     'Realtime Service (8084)',
-  'notification-service': 'Notification Service (8085)',
+  'moodavatar-backend': 'Backend (Monolith)',
 }
 const serviceLabel = (name: string) => SERVICE_LABELS[name] ?? name
 

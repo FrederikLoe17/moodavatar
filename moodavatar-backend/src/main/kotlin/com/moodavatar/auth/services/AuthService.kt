@@ -53,9 +53,10 @@ class AuthService(
 
             val userId = row[Users.id]
             val userRole = row[Users.role].name
+            val usernameVal = row[Users.username]
 
             AuthResponse(
-                accessToken = generateAccessToken(userId, userRole),
+                accessToken = generateAccessToken(userId, userRole, usernameVal),
                 refreshToken = generateRefreshToken(userId),
                 user =
                     UserResponse(
@@ -79,9 +80,11 @@ class AuthService(
             if (row[RefreshTokens.expiresAt].isBefore(LocalDateTime.now())) error("TOKEN_EXPIRED")
 
             val userId = row[RefreshTokens.userId]
-            val userRole = Users.select { Users.id eq userId }.single()[Users.role].name
+            val userRow = Users.select { Users.id eq userId }.single()
+            val userRole = userRow[Users.role].name
+            val usernameVal = userRow[Users.username]
 
-            RefreshResponse(accessToken = generateAccessToken(userId, userRole))
+            RefreshResponse(accessToken = generateAccessToken(userId, userRole, usernameVal))
         }
 
     fun logout(refreshToken: String) =
@@ -192,12 +195,14 @@ class AuthService(
     private fun generateAccessToken(
         userId: UUID,
         role: String,
+        username: String,
     ): String =
         JWT.create()
             .withIssuer(issuer)
             .withAudience(audience)
             .withClaim("userId", userId.toString())
             .withClaim("role", role)
+            .withClaim("username", username)
             .withExpiresAt(Date(System.currentTimeMillis() + accessExpiry))
             .sign(Algorithm.HMAC256(secret))
 

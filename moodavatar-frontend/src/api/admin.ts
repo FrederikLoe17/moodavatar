@@ -60,7 +60,6 @@ export interface ServiceHealth {
 
 export interface SystemHealth {
   services: ServiceHealth[]
-  rabbitmq: ServiceHealth
   timestamp: string
 }
 

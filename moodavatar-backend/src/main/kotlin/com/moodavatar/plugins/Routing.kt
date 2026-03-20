@@ -29,6 +29,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class HealthResponse(val status: String, val service: String)
 
+@Serializable
+data class ServiceHealthInfo(val name: String, val ok: Boolean, val responseMs: Long = 0)
+
+@Serializable
+data class SystemHealthResponse(val services: List<ServiceHealthInfo>, val timestamp: String)
+
 fun Application.configureRouting(mongoDb: MongoDatabase) {
     val cfg = environment.config
     val jwtSecret = cfg.property("jwt.secret").getString()
@@ -52,7 +58,12 @@ fun Application.configureRouting(mongoDb: MongoDatabase) {
             call.respond(HealthResponse(status = "ok", service = "moodavatar-backend"))
         }
         get("/system/health") {
-            call.respond(HealthResponse(status = "ok", service = "moodavatar-backend"))
+            call.respond(
+                SystemHealthResponse(
+                    services = listOf(ServiceHealthInfo(name = "moodavatar-backend", ok = true)),
+                    timestamp = java.time.Instant.now().toString(),
+                ),
+            )
         }
 
         // ── Auth ────────────────────────────────────────────────────────────
