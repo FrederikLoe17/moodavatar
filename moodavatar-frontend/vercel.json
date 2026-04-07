@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://surveillance-wiring-prague-liked.trycloudflare.com/:path*"
+      "destination": "https://joining-illinois-joe-indicated.trycloudflare.com/api/:path*"
     },
     {
       "source": "/(.*)",
