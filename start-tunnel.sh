@@ -1,94 +1,75 @@
-#!/bin/bash
-# Startet den Cloudflare Tunnel und updated automatisch:
-#   - moodavatar-frontend/vercel.json (Rewrite-Destination)
-#   - Vercel Env Vars: BACKEND_URL + VITE_WS_URL
-#   - Pusht zu git -> Vercel deployed automatisch neu
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# Credentials aus .env laden
-if [ ! -f "$SCRIPT_DIR/.env" ]; then
-  echo "❌ .env nicht gefunden in $SCRIPT_DIR"
-  exit 1
+# Load .env
+if [[ -f ".env" ]]; then
+  export $(grep -v '^#' .env | grep -v '^$' | xargs)
 fi
-source "$SCRIPT_DIR/.env"
 
-VERCEL_JSON="$SCRIPT_DIR/moodavatar-frontend/vercel.json"
+echo "🚇 Starting Cloudflare Tunnel..."
+cloudflared tunnel --url localhost:8080 &> /tmp/cloudflared.log &
+CLOUDFLARED_PID=$!
 
-echo "🚀 Cloudflare Tunnel wird gestartet..."
-TUNNEL_LOG=$(mktemp)
-cloudflared tunnel --url localhost:8080 >"$TUNNEL_LOG" 2>&1 &
-TUNNEL_PID=$!
-
-# Auf URL warten
-echo "⏳ Warte auf Tunnel-URL..."
+# Wait for tunnel URL
+echo "⏳ Waiting for tunnel URL..."
 TUNNEL_URL=""
 for i in $(seq 1 30); do
-  TUNNEL_URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | head -1)
-  if [ -n "$TUNNEL_URL" ]; then
+  TUNNEL_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' /tmp/cloudflared.log 2>/dev/null | head -1 || true)
+  if [[ -n "$TUNNEL_URL" ]]; then
     break
   fi
-  sleep 1
+  sleep 2
 done
 
-if [ -z "$TUNNEL_URL" ]; then
-  echo "❌ Tunnel-URL konnte nicht ermittelt werden (30s Timeout)"
-  kill "$TUNNEL_PID" 2>/dev/null
+if [[ -z "$TUNNEL_URL" ]]; then
+  echo "❌ Could not extract tunnel URL. Check /tmp/cloudflared.log"
+  kill $CLOUDFLARED_PID 2>/dev/null || true
   exit 1
 fi
 
-WS_URL="${TUNNEL_URL/https:\/\//wss://}"
+echo "✅ Tunnel URL: $TUNNEL_URL"
 
-echo "✅ Tunnel-URL: $TUNNEL_URL"
-echo "✅ WebSocket-URL: $WS_URL"
+WS_URL=$(echo "$TUNNEL_URL" | sed 's/https:/wss:/')
 
-# vercel.json updaten
-echo ""
-echo "📝 vercel.json wird aktualisiert..."
-sed -i "s|https://[a-z0-9-]*\.trycloudflare\.com|$TUNNEL_URL|g" "$VERCEL_JSON"
-echo "   ✅ vercel.json aktualisiert"
+# Update vercel.json
+echo "📝 Updating vercel.json..."
+cd moodavatar-frontend
+node -e "
+const fs = require('fs');
+const v = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+v.rewrites = v.rewrites.map(r => {
+  if (r.source === '/api/:path*') r.destination = '$TUNNEL_URL/api/:path*';
+  return r;
+});
+fs.writeFileSync('vercel.json', JSON.stringify(v, null, 2) + '\n');
+"
+cd ..
 
-# Vercel Env Vars updaten
-echo ""
-echo "🔄 Vercel Env Vars werden aktualisiert..."
+# Update Vercel Env Vars
+echo "🔧 Updating Vercel env vars..."
+curl -s -X PATCH "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env/$VERCEL_BACKEND_URL_ID" \
+  -H "Authorization: Bearer $VERCEL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"value\": \"$TUNNEL_URL\"}" > /dev/null
 
-update_env() {
-  local id=$1
-  local value=$2
-  local key=$3
-  local response
-  response=$(curl -s -X PATCH \
-    "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env/$id" \
-    -H "Authorization: Bearer $VERCEL_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "{\"value\": \"$value\"}")
-  if echo "$response" | grep -q '"key"'; then
-    echo "   ✅ $key aktualisiert"
-  else
-    echo "   ❌ $key fehlgeschlagen: $response"
-  fi
-}
+curl -s -X PATCH "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID/env/$VERCEL_WS_URL_ID" \
+  -H "Authorization: Bearer $VERCEL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"value\": \"$WS_URL\"}" > /dev/null
 
-update_env "$VERCEL_BACKEND_URL_ID" "$TUNNEL_URL" "BACKEND_URL"
-update_env "$VERCEL_WS_URL_ID" "$WS_URL" "VITE_WS_URL"
+echo "✅ Vercel env vars updated"
 
-# Git commit & push -> Vercel Deploy
-echo ""
-echo "📤 Push zu git (löst Vercel-Deploy aus)..."
-cd "$SCRIPT_DIR"
+# Git commit + push
+echo "🚀 Pushing to trigger Vercel redeploy..."
 git add moodavatar-frontend/vercel.json
-git commit -m "chore: update cloudflare tunnel url"
+git commit -m "chore(deploy): update tunnel URL to $TUNNEL_URL"
 git push origin main
 
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ Fertig! Vercel deployt jetzt neu (~1-2 Min)"
-echo "🔗 Tunnel:    $TUNNEL_URL"
-echo "🔗 WebSocket: $WS_URL"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎉 Done! Vercel will redeploy shortly."
+echo "   Tunnel: $TUNNEL_URL"
+echo "   WS:     $WS_URL"
+echo "   Frontend: https://moodavatar.vercel.app"
 echo ""
-echo "Ctrl+C um den Tunnel zu stoppen"
-
-wait "$TUNNEL_PID"
+echo "Tunnel is running (PID $CLOUDFLARED_PID). Press Ctrl+C to stop."
+wait $CLOUDFLARED_PID

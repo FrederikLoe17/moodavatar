@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://joining-illinois-joe-indicated.trycloudflare.com/api/:path*"
+      "destination": "https://inches-contacting-stations-recordings.trycloudflare.com/api/:path*"
     },
     {
       "source": "/(.*)",
